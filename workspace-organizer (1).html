@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Workspace</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#23211D">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@500;700&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  --paper: #EFE9DD;
+  --card: #FBF7EE;
+  --ink: #23211D;
+  --ink-soft: #6b6455;
+  --line: #D8CFB9;
+  --accent-1: #2F5D62;
+  --accent-2: #B23A2E;
+  --accent-3: #C98A2B;
+  --accent-4: #6B4C6B;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Inter', system-ui, sans-serif;
+  min-height: 100vh;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 20px 16px 100px;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.header h1 {
+  font-family: 'Roboto Slab', serif;
+  font-weight: 700;
+  font-size: 26px;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.header .reset-link {
+  font-size: 12px;
+  color: var(--ink-soft);
+  background: none;
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.crumbs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+  margin-bottom: 16px;
+  scrollbar-width: none;
+}
+.crumbs::-webkit-scrollbar { display: none; }
+
+.crumb {
+  flex: 0 0 auto;
+  font-family: 'Roboto Slab', serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 14px 8px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-bottom: 3px solid var(--crumb-color, var(--line));
+  border-radius: 6px 6px 0 0;
+  color: var(--ink-soft);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.crumb.current {
+  color: var(--ink);
+  background: var(--paper);
+  border-bottom-width: 3px;
+}
+
+.crumb .arrow {
+  margin-left: 8px;
+  color: var(--line);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.card {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 14px;
+  min-height: 118px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-top: 4px solid var(--depth-color, var(--line));
+  transition: transform 0.12s ease;
+}
+.card:active { transform: scale(0.97); }
+
+.card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 14px 14px 0;
+  border-color: transparent var(--paper) transparent transparent;
+  filter: drop-shadow(-1px 1px 0px var(--line));
+}
+
+.card .thumb {
+  width: 100%;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 3px;
+  margin-bottom: 8px;
+  border: 1px solid var(--line);
+}
+
+.card .name {
+  font-family: 'Roboto Slab', serif;
+  font-weight: 500;
+  font-size: 15px;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.card .meta {
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  margin-top: 6px;
+}
+
+.card .edit-btn {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.add-card {
+  background: transparent;
+  border: 1.5px dashed var(--line);
+  border-top: 1.5px dashed var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--ink-soft);
+  min-height: 118px;
+}
+.add-card .plus {
+  font-size: 26px;
+  line-height: 1;
+  font-weight: 400;
+}
+.add-card .label {
+  font-family: 'Roboto Slab', serif;
+  font-size: 13px;
+}
+
+.empty-note {
+  grid-column: 1 / -1;
+  font-size: 13px;
+  color: var(--ink-soft);
+  padding: 4px 2px 14px;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(35,33,29,0.5);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 50;
+}
+
+.sheet {
+  background: var(--card);
+  width: 100%;
+  max-width: 640px;
+  border-radius: 14px 14px 0 0;
+  padding: 22px 20px 26px;
+  border-top: 4px solid var(--depth-color, var(--accent-1));
+}
+
+.sheet h2 {
+  font-family: 'Roboto Slab', serif;
+  font-size: 18px;
+  margin: 0 0 16px;
+}
+
+.field-label {
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+  display: block;
+}
+
+.sheet input[type="text"] {
+  width: 100%;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--ink);
+  margin-bottom: 16px;
+}
+.sheet input[type="text"]:focus {
+  outline: 2px solid var(--depth-color, var(--accent-1));
+  outline-offset: 1px;
+}
+
+.image-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.image-preview {
+  width: 56px;
+  height: 56px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+
+.file-btn {
+  font-size: 13px;
+  padding: 9px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.remove-img-btn {
+  font-size: 12px;
+  color: var(--accent-2);
+  background: none;
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.sheet-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 8px;
+  font-family: 'Roboto Slab', serif;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
+}
+
+.btn-danger {
+  background: transparent;
+  color: var(--accent-2);
+  border: 1px solid var(--accent-2);
+  flex: 0 0 auto;
+  padding: 12px 16px;
+}
+
+.loading {
+  text-align: center;
+  padding: 60px 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <h1>Workspace</h1>
+    <div style="display:flex; gap:14px; align-items:baseline;">
+      <button class="reset-link" id="refreshBtn">refresh</button>
+      <button class="reset-link" id="resetBtn">reset all</button>
+    </div>
+  </div>
+
+  <div class="crumbs" id="crumbs"></div>
+  <div class="grid" id="grid"></div>
+
+  <div id="loadingState" class="loading">Opening your workspace…</div>
+</div>
+
+<div class="overlay hidden" id="overlay">
+  <div class="sheet" id="sheet">
+    <h2 id="sheetTitle">New item</h2>
+    <span class="field-label">Name</span>
+    <input type="text" id="nameInput" placeholder="e.g. Ahmed's Bottles, 500ml Round, Front Label" />
+
+    <span class="field-label">Sticker image (optional)</span>
+    <div class="image-row">
+      <img id="imagePreview" class="image-preview hidden" />
+      <button class="file-btn" id="chooseFileBtn">Choose image</button>
+      <button class="remove-img-btn hidden" id="removeImgBtn">Remove</button>
+      <input type="file" id="fileInput" accept="image/*" class="hidden" />
+    </div>
+
+    <div class="sheet-actions">
+      <button class="btn btn-danger hidden" id="deleteBtn">Delete</button>
+      <button class="btn btn-secondary" id="cancelBtn">Cancel</button>
+      <button class="btn btn-primary" id="saveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DEPTH_COLORS = ['var(--accent-1)', 'var(--accent-2)', 'var(--accent-3)', 'var(--accent-4)'];
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA1tc4VBRUVXNN8pfFrPgFb-UPTIELMdSg",
+  authDomain: "workspace-app-f1651.firebaseapp.com",
+  projectId: "workspace-app-f1651",
+  storageBucket: "workspace-app-f1651.firebasestorage.app",
+  messagingSenderId: "327605278208",
+  appId: "1:327605278208:web:97c408f60068df893ceae5"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const treeDocRef = db.collection('workspace').doc('tree');
+
+let tree = null;
+let path = ['root']; // array of node ids from root to current
+let editingNodeId = null; // when set, sheet is in edit mode
+let pendingImageData = null; // dataURL staged for save
+let removeImageFlag = false;
+
+function uid() {
+  return 'n' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+function defaultTree() {
+  return { id: 'root', name: 'Workspace', children: [] };
+}
+
+function findNode(node, id) {
+  if (node.id === id) return node;
+  for (const child of node.children) {
+    const found = findNode(child, id);
+    if (found) return found;
+  }
+  return null;
+}
+
+function findParent(node, id, parent = null) {
+  if (node.id === id) return parent;
+  for (const child of node.children) {
+    const found = findParent(child, id, node);
+    if (found !== undefined && found !== null) return found;
+  }
+  return null;
+}
+
+async function loadTreeOnce() {
+  try {
+    const snap = await treeDocRef.get();
+    if (snap.exists) {
+      tree = JSON.parse(snap.data().json);
+    } else {
+      tree = defaultTree();
+      await saveTree();
+    }
+    return true;
+  } catch (e) {
+    console.error('Failed to load workspace', e);
+    if (!tree) tree = defaultTree();
+    document.getElementById('loadingState').textContent = 'Could not connect. Check your internet connection and tap refresh.';
+    return false;
+  }
+}
+
+async function refreshAndRender() {
+  const ok = await loadTreeOnce();
+  document.getElementById('loadingState').classList.add('hidden');
+  if (ok) render();
+}
+
+async function saveTree() {
+  try {
+    await treeDocRef.set({ json: JSON.stringify(tree) });
+  } catch (e) {
+    console.error('Failed to save workspace', e);
+    alert('Could not save your changes. Please check your connection and try again.');
+  }
+}
+
+async function getImage(nodeId) {
+  try {
+    const snap = await db.collection('images').doc(nodeId).get();
+    return snap.exists ? snap.data().data : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function setImage(nodeId, dataUrl) {
+  try {
+    await db.collection('images').doc(nodeId).set({ data: dataUrl });
+  } catch (e) {
+    console.error('Failed to save image', e);
+    alert('Could not save that image — it may be too large.');
+  }
+}
+
+async function deleteImage(nodeId) {
+  try {
+    await db.collection('images').doc(nodeId).delete();
+  } catch (e) {
+    // fine if it didn't exist
+  }
+}
+
+function countDescendantImages(node, ids) {
+  if (node.hasImage) ids.push(node.id);
+  for (const c of node.children) countDescendantImages(c, ids);
+  return ids;
+}
+
+function renderCrumbs() {
+  const el = document.getElementById('crumbs');
+  el.innerHTML = '';
+  path.forEach((id, i) => {
+    const node = findNode(tree, id);
+    if (!node) return;
+    const crumb = document.createElement('div');
+    crumb.className = 'crumb' + (i === path.length - 1 ? ' current' : '');
+    crumb.style.setProperty('--crumb-color', DEPTH_COLORS[i % DEPTH_COLORS.length]);
+    crumb.textContent = node.name;
+    crumb.addEventListener('click', () => {
+      path = path.slice(0, i + 1);
+      render();
+    });
+    el.appendChild(crumb);
+  });
+}
+
+async function renderGrid() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  const currentId = path[path.length - 1];
+  const node = findNode(tree, currentId);
+  const depth = path.length; // depth of children being shown
+  const color = DEPTH_COLORS[depth % DEPTH_COLORS.length];
+
+  if (!node.children.length) {
+    const note = document.createElement('div');
+    note.className = 'empty-note';
+    note.textContent = 'Nothing here yet. Add the first one below.';
+    grid.appendChild(note);
+  }
+
+  for (const child of node.children) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.setProperty('--depth-color', color);
+
+    if (child.hasImage) {
+      const img = document.createElement('img');
+      img.className = 'thumb';
+      img.alt = child.name;
+      getImage(child.id).then(data => { if (data) img.src = data; });
+      card.appendChild(img);
+    }
+
+    const name = document.createElement('div');
+    name.className = 'name';
+    name.textContent = child.name;
+    card.appendChild(name);
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.textContent = child.children.length
+      ? child.children.length + (child.children.length === 1 ? ' item inside' : ' items inside')
+      : (child.hasImage ? 'sticker' : 'empty');
+    card.appendChild(meta);
+
+    const editBtn = document.createElement('div');
+    editBtn.className = 'edit-btn';
+    editBtn.textContent = '⋯';
+    editBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openSheet(child.id);
+    });
+    card.appendChild(editBtn);
+
+    card.addEventListener('click', () => {
+      path.push(child.id);
+      render();
+    });
+
+    grid.appendChild(card);
+  }
+
+  const addCard = document.createElement('div');
+  addCard.className = 'card add-card';
+  addCard.style.setProperty('--depth-color', color);
+  addCard.innerHTML = '<div class="plus">+</div><div class="label">Add new</div>';
+  addCard.addEventListener('click', () => openSheet(null));
+  grid.appendChild(addCard);
+}
+
+function render() {
+  renderCrumbs();
+  renderGrid();
+}
+
+function openSheet(nodeId) {
+  editingNodeId = nodeId;
+  pendingImageData = null;
+  removeImageFlag = false;
+
+  const overlay = document.getElementById('overlay');
+  const title = document.getElementById('sheetTitle');
+  const nameInput = document.getElementById('nameInput');
+  const preview = document.getElementById('imagePreview');
+  const removeBtn = document.getElementById('removeImgBtn');
+  const deleteBtn = document.getElementById('deleteBtn');
+  const depth = path.length;
+  document.getElementById('sheet').style.setProperty('--depth-color', DEPTH_COLORS[depth % DEPTH_COLORS.length]);
+
+  preview.classList.add('hidden');
+  removeBtn.classList.add('hidden');
+  preview.src = '';
+
+  if (nodeId) {
+    const node = findNode(tree, nodeId);
+    title.textContent = 'Edit';
+    nameInput.value = node.name;
+    deleteBtn.classList.remove('hidden');
+    if (node.hasImage) {
+      getImage(nodeId).then(data => {
+        if (data) {
+          preview.src = data;
+          preview.classList.remove('hidden');
+          removeBtn.classList.remove('hidden');
+        }
+      });
+    }
+  } else {
+    title.textContent = 'New item';
+    nameInput.value = '';
+    deleteBtn.classList.add('hidden');
+  }
+
+  overlay.classList.remove('hidden');
+  setTimeout(() => nameInput.focus(), 50);
+}
+
+function closeSheet() {
+  document.getElementById('overlay').classList.add('hidden');
+  editingNodeId = null;
+  pendingImageData = null;
+  removeImageFlag = false;
+  document.getElementById('fileInput').value = '';
+}
+
+document.getElementById('cancelBtn').addEventListener('click', closeSheet);
+document.getElementById('overlay').addEventListener('click', (e) => {
+  if (e.target.id === 'overlay') closeSheet();
+});
+
+document.getElementById('chooseFileBtn').addEventListener('click', () => {
+  document.getElementById('fileInput').click();
+});
+
+document.getElementById('fileInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const maxDim = 900;
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        const scale = maxDim / Math.max(width, height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      pendingImageData = canvas.toDataURL('image/jpeg', 0.82);
+      removeImageFlag = false;
+      const preview = document.getElementById('imagePreview');
+      preview.src = pendingImageData;
+      preview.classList.remove('hidden');
+      document.getElementById('removeImgBtn').classList.remove('hidden');
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('removeImgBtn').addEventListener('click', () => {
+  pendingImageData = null;
+  removeImageFlag = true;
+  document.getElementById('imagePreview').classList.add('hidden');
+  document.getElementById('removeImgBtn').classList.add('hidden');
+  document.getElementById('fileInput').value = '';
+});
+
+document.getElementById('saveBtn').addEventListener('click', async () => {
+  const name = document.getElementById('nameInput').value.trim();
+  if (!name) {
+    alert('Give it a name first.');
+    return;
+  }
+
+  const saveBtn = document.getElementById('saveBtn');
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Saving…';
+
+  const currentId = path[path.length - 1];
+  const parentNode = findNode(tree, currentId);
+
+  if (editingNodeId) {
+    const node = findNode(tree, editingNodeId);
+    node.name = name;
+    if (pendingImageData) {
+      await setImage(editingNodeId, pendingImageData);
+      node.hasImage = true;
+    } else if (removeImageFlag) {
+      await deleteImage(editingNodeId);
+      node.hasImage = false;
+    }
+  } else {
+    const newNode = { id: uid(), name, children: [], hasImage: false };
+    if (pendingImageData) {
+      await setImage(newNode.id, pendingImageData);
+      newNode.hasImage = true;
+    }
+    parentNode.children.push(newNode);
+  }
+
+  await saveTree();
+  saveBtn.disabled = false;
+  saveBtn.textContent = 'Save';
+  closeSheet();
+  render();
+});
+
+document.getElementById('deleteBtn').addEventListener('click', async () => {
+  const node = findNode(tree, editingNodeId);
+  const count = node.children.length;
+  const msg = count
+    ? `Delete "${node.name}" and everything inside it (${count} item${count === 1 ? '' : 's'})?`
+    : `Delete "${node.name}"?`;
+  if (!confirm(msg)) return;
+
+  const parent = findParent(tree, editingNodeId);
+  const imageIds = countDescendantImages(node, []);
+  for (const id of imageIds) await deleteImage(id);
+
+  parent.children = parent.children.filter(c => c.id !== editingNodeId);
+  await saveTree();
+  closeSheet();
+  render();
+});
+
+document.getElementById('refreshBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('refreshBtn');
+  btn.textContent = 'refreshing…';
+  await loadTreeOnce();
+  path = ['root'];
+  render();
+  btn.textContent = 'refresh';
+});
+
+document.getElementById('resetBtn').addEventListener('click', async () => {
+  if (!confirm('Erase everything in your workspace? This cannot be undone.')) return;
+  const allImageIds = countDescendantImages(tree, []);
+  for (const id of allImageIds) await deleteImage(id);
+  tree = defaultTree();
+  await saveTree();
+  path = ['root'];
+  render();
+});
+
+refreshAndRender();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
