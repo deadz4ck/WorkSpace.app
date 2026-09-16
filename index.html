@@ -8,10 +8,8 @@
 <meta name="theme-color" content="#23211D">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@500;700&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@500;700&family=Inter:wght@400;500;600&family=Playfair+Display:wght@700&family=Dancing+Script:wght@600;700&display=swap');
 
 :root {
   --paper: #EFE9DD;
@@ -40,21 +38,58 @@ body {
   max-width: 640px;
   margin: 0 auto;
   padding: 20px 16px 100px;
+  position: relative;
+  z-index: 1;
+}
+
+.bg-strings {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.55;
 }
 
 .header {
+  position: relative;
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 18px;
+  margin-bottom: 6px;
+  z-index: 1;
 }
 
-.header h1 {
-  font-family: 'Roboto Slab', serif;
+.wordmark {
+  position: relative;
+  line-height: 0.95;
+  padding: 6px 4px 14px 2px;
+}
+
+.wordmark .work {
+  font-family: 'Playfair Display', serif;
   font-weight: 700;
-  font-size: 26px;
-  margin: 0;
-  letter-spacing: -0.01em;
+  font-size: 34px;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+}
+
+.wordmark .space {
+  font-family: 'Dancing Script', cursive;
+  font-weight: 700;
+  font-size: 30px;
+  color: var(--accent-2);
+  margin-left: 6px;
+  position: relative;
+  top: 3px;
+}
+
+.wordmark .flourish {
+  position: absolute;
+  left: -6px;
+  bottom: -2px;
+  width: 190px;
+  height: 34px;
+  pointer-events: none;
 }
 
 .header .reset-link {
@@ -140,11 +175,29 @@ body {
 
 .card .thumb {
   width: 100%;
-  height: 60px;
-  object-fit: cover;
+  height: 90px;
+  object-fit: contain;
+  background: var(--paper);
   border-radius: 3px;
   margin-bottom: 8px;
   border: 1px solid var(--line);
+}
+
+.card .name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.card .icon-badge {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .card .name {
@@ -238,7 +291,9 @@ body {
   display: block;
 }
 
-.sheet input[type="text"] {
+.sheet input[type="text"],
+.sheet input[type="number"],
+.sheet select {
   width: 100%;
   font-family: 'Inter', sans-serif;
   font-size: 15px;
@@ -249,7 +304,9 @@ body {
   color: var(--ink);
   margin-bottom: 16px;
 }
-.sheet input[type="text"]:focus {
+.sheet input[type="text"]:focus,
+.sheet input[type="number"]:focus,
+.sheet select:focus {
   outline: 2px solid var(--depth-color, var(--accent-1));
   outline-offset: 1px;
 }
@@ -259,6 +316,72 @@ body {
   align-items: center;
   gap: 12px;
   margin-bottom: 18px;
+}
+
+.icon-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.icon-badge-preview {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 1.5px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-soft);
+}
+
+.icon-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.icon-choice {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  border: 1.5px solid var(--line);
+  background: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--ink-soft);
+}
+
+.icon-choice svg { width: 20px; height: 20px; }
+
+.icon-choice.selected {
+  border-color: var(--depth-color, var(--accent-1));
+  background: var(--card);
+  color: var(--depth-color, var(--accent-1));
+  box-shadow: inset 0 0 0 1px var(--depth-color, var(--accent-1));
+}
+
+.color-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.color-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+}
+
+.color-swatch.selected {
+  border-color: var(--ink);
 }
 
 .image-preview {
@@ -332,23 +455,160 @@ body {
 }
 
 .hidden { display: none !important; }
+
+.section-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.section-tab {
+  flex: 1;
+  font-family: 'Roboto Slab', serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1.5px solid var(--line);
+  background: var(--card);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.section-tab.active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+.carton-total {
+  font-family: 'Roboto Slab', serif;
+  font-size: 14px;
+  color: var(--accent-2);
+  background: var(--paper);
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 18px;
+}
+
+.action-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.action-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.history-entry {
+  border-bottom: 1px solid var(--line);
+  padding: 10px 2px;
+}
+.history-entry:last-child { border-bottom: none; }
+
+.history-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 3px;
+}
+
+.history-action {
+  font-family: 'Roboto Slab', serif;
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 10px;
+  color: var(--paper);
+}
+.history-action.added { background: var(--accent-1); }
+.history-action.edited { background: var(--accent-3); }
+.history-action.removed { background: var(--accent-2); }
+
+.history-time {
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+.history-name {
+  font-family: 'Roboto Slab', serif;
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.history-details {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
 </style>
 </head>
 <body>
 
+<svg class="bg-strings" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+  <path d="M -20 60 C 80 20, 140 100, 90 150 C 40 200, 160 190, 230 140" stroke="#B23A2E" stroke-width="1.4" fill="none" opacity="0.10"/>
+  <path d="M 420 260 C 320 240, 300 320, 360 350 C 420 380, 300 420, 250 380" stroke="#B23A2E" stroke-width="1.4" fill="none" opacity="0.09"/>
+  <path d="M -30 520 C 60 500, 90 580, 40 610 C -10 640, 100 650, 150 600" stroke="#B23A2E" stroke-width="1.4" fill="none" opacity="0.10"/>
+  <path d="M 410 700 C 330 680, 340 760, 400 780" stroke="#B23A2E" stroke-width="1.4" fill="none" opacity="0.08"/>
+  <path d="M 60 380 C 140 360, 130 440, 60 450" stroke="#B23A2E" stroke-width="1.2" fill="none" opacity="0.07"/>
+</svg>
+
 <div class="app">
-  <div class="header">
-    <h1>Workspace</h1>
-    <div style="display:flex; gap:14px; align-items:baseline;">
-      <button class="reset-link" id="refreshBtn">refresh</button>
-      <button class="reset-link" id="resetBtn">reset all</button>
-    </div>
+  <div class="section-tabs">
+    <button class="section-tab active" id="tabWorkspaceBtn">Workspace</button>
+    <button class="section-tab" id="tabStorageBtn">Storage</button>
   </div>
 
-  <div class="crumbs" id="crumbs"></div>
-  <div class="grid" id="grid"></div>
+  <div id="workspaceSection">
+    <div class="header">
+      <div class="wordmark">
+        <span class="work">Work</span><span class="space">space</span>
+        <svg class="flourish" viewBox="0 0 190 34" xmlns="http://www.w3.org/2000/svg">
+          <path d="M 4 18 C 40 34, 90 34, 120 16 C 145 2, 168 8, 172 20 C 175 28, 165 30, 160 24 C 156 19, 162 15, 168 18 C 176 22, 174 30, 165 30"
+            stroke="#B23A2E" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <button class="reset-link" id="resetBtn">reset all</button>
+    </div>
 
-  <div id="loadingState" class="loading">Opening your workspace…</div>
+    <div class="crumbs" id="crumbs"></div>
+    <div class="grid" id="grid"></div>
+
+    <div id="loadingState" class="loading">Opening your workspace…</div>
+  </div>
+
+  <div id="storageSection" class="hidden">
+    <div class="header">
+      <div class="wordmark">
+        <span class="work">Stor</span><span class="space">age</span>
+        <svg class="flourish" viewBox="0 0 190 34" xmlns="http://www.w3.org/2000/svg">
+          <path d="M 4 18 C 40 34, 90 34, 120 16 C 145 2, 168 8, 172 20 C 175 28, 165 30, 160 24 C 156 19, 162 15, 168 18 C 176 22, 174 30, 165 30"
+            stroke="#B23A2E" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <button class="reset-link" id="storageHistoryBtn">history</button>
+    </div>
+
+    <div class="section-tabs" style="margin-bottom:16px;">
+      <button class="section-tab active" id="tabStickersBtn">Stickers</button>
+      <button class="section-tab" id="tabCartonsBtn">Cartons</button>
+    </div>
+
+    <div class="grid" id="storageGrid"></div>
+  </div>
 </div>
 
 <div class="overlay hidden" id="overlay">
@@ -356,6 +616,29 @@ body {
     <h2 id="sheetTitle">New item</h2>
     <span class="field-label">Name</span>
     <input type="text" id="nameInput" placeholder="e.g. Ahmed's Bottles, 500ml Round, Front Label" />
+
+    <span class="field-label">Type (optional)</span>
+    <select id="typeInput">
+      <option value="">— none —</option>
+      <option value="customer">Customer</option>
+      <option value="bundle">Bundle</option>
+      <option value="bottle">Bottle</option>
+      <option value="cap">Cap</option>
+      <option value="sticker">Sticker</option>
+      <option value="product">Product</option>
+    </select>
+
+    <span class="field-label">Icon (optional)</span>
+    <div class="icon-preview-row">
+      <div class="icon-badge-preview" id="iconPreview"></div>
+      <div class="icon-grid" id="iconGrid"></div>
+    </div>
+
+    <span class="field-label">Icon color</span>
+    <div class="color-row" id="colorRow"></div>
+
+    <span class="field-label">Amount in stock (optional)</span>
+    <input type="number" id="amountInput" placeholder="e.g. 24" min="0" step="1" />
 
     <span class="field-label">Sticker image (optional)</span>
     <div class="image-row">
@@ -373,26 +656,191 @@ body {
   </div>
 </div>
 
+<div class="overlay hidden" id="confirmOverlay">
+  <div class="sheet" id="confirmSheet" style="max-width:420px; border-radius:14px;">
+    <h2 id="confirmMessage" style="margin-bottom:18px;">Are you sure?</h2>
+    <div class="sheet-actions">
+      <button class="btn btn-secondary" id="confirmNoBtn">Cancel</button>
+      <button class="btn btn-primary" id="confirmYesBtn" style="background:var(--accent-2);">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="storageOverlay">
+  <div class="sheet" id="storageSheet">
+    <h2 id="storageSheetTitle">New sticker</h2>
+    <span class="field-label">Name</span>
+    <input type="text" id="storageNameInput" placeholder="e.g. Rose Gold Round Label" />
+
+    <div id="storageStickerFields">
+      <span class="field-label">Amount in stock</span>
+      <input type="number" id="storageAmountInput" placeholder="e.g. 150" min="0" step="1" />
+
+      <span class="field-label">Picture (optional)</span>
+      <div class="image-row">
+        <img id="storageImagePreview" class="image-preview hidden" />
+        <button class="file-btn" id="storageChooseFileBtn">Choose image</button>
+        <button class="remove-img-btn hidden" id="storageRemoveImgBtn">Remove</button>
+        <input type="file" id="storageFileInput" accept="image/*" class="hidden" />
+      </div>
+    </div>
+
+    <div id="storageCartonFields" class="hidden">
+      <span class="field-label">Units per carton</span>
+      <input type="number" id="unitsPerCartonInput" placeholder="e.g. 12" min="0" step="1" />
+
+      <span class="field-label">Number of cartons</span>
+      <input type="number" id="cartonCountInput" placeholder="e.g. 30" min="0" step="1" />
+
+      <span class="field-label">Extra loose pieces (not in a full carton)</span>
+      <input type="number" id="extraPiecesInput" placeholder="e.g. 7" min="0" step="1" />
+
+      <div class="carton-total" id="cartonTotalPreview">Total: 0 units</div>
+    </div>
+
+    <div class="sheet-actions">
+      <button class="btn btn-danger hidden" id="storageDeleteBtn">Delete</button>
+      <button class="btn btn-secondary" id="storageCancelBtn">Cancel</button>
+      <button class="btn btn-primary" id="storageSaveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="actionMenuOverlay">
+  <div class="sheet" id="actionMenuSheet" style="max-width:380px; border-radius:14px;">
+    <h2 id="actionMenuTitle" style="margin-bottom:16px;">Item</h2>
+    <div class="action-menu-list">
+      <button class="action-menu-item" id="actionEditBtn">
+        <svg viewBox="0 0 24 24" width="18" height="18"><path d="M4 20h4l10-10-4-4L4 16v4Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        Edit
+      </button>
+      <button class="action-menu-item" id="actionHistoryBtn">
+        <svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 7.5V12l3 2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        History
+      </button>
+    </div>
+    <button class="btn btn-secondary" id="actionMenuCancelBtn" style="width:100%; margin-top:6px;">Cancel</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="historyOverlay">
+  <div class="sheet" id="historySheet" style="max-height:80vh; display:flex; flex-direction:column;">
+    <h2 id="historyTitle">History</h2>
+    <div id="historyList" style="overflow-y:auto; flex:1; margin-bottom:16px;"></div>
+    <button class="btn btn-secondary" id="historyCloseBtn">Close</button>
+  </div>
+</div>
+
 <script>
 const DEPTH_COLORS = ['var(--accent-1)', 'var(--accent-2)', 'var(--accent-3)', 'var(--accent-4)'];
+const TREE_KEY = 'workspace-tree';
+const DB_NAME = 'workspace-db';
+const STORE_NAME = 'kv';
+let dbPromise = null;
 
-const firebaseConfig = {
-  apiKey: "AIzaSyA1tc4VBRUVXNN8pfFrPgFb-UPTIELMdSg",
-  authDomain: "workspace-app-f1651.firebaseapp.com",
-  projectId: "workspace-app-f1651",
-  storageBucket: "workspace-app-f1651.firebasestorage.app",
-  messagingSenderId: "327605278208",
-  appId: "1:327605278208:web:97c408f60068df893ceae5"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-const treeDocRef = db.collection('workspace').doc('tree');
+function openDB() {
+  if (dbPromise) return dbPromise;
+  dbPromise = new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      req.result.createObjectStore(STORE_NAME);
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  return dbPromise;
+}
+
+function idbGet(key) {
+  return openDB().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const req = tx.objectStore(STORE_NAME).get(key);
+    req.onsuccess = () => resolve(req.result === undefined ? null : req.result);
+    req.onerror = () => reject(req.error);
+  }));
+}
+
+function idbSet(key, value) {
+  return openDB().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).put(value, key);
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
+  }));
+}
+
+function idbDelete(key) {
+  return openDB().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).delete(key);
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error);
+  }));
+}
 
 let tree = null;
 let path = ['root']; // array of node ids from root to current
 let editingNodeId = null; // when set, sheet is in edit mode
 let pendingImageData = null; // dataURL staged for save
 let removeImageFlag = false;
+let selectedIcon = null;
+let selectedIconColor = null;
+
+function customConfirm(message, confirmLabel) {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById('confirmOverlay');
+    const msgEl = document.getElementById('confirmMessage');
+    const yesBtn = document.getElementById('confirmYesBtn');
+    const noBtn = document.getElementById('confirmNoBtn');
+    msgEl.textContent = message;
+    yesBtn.textContent = confirmLabel || 'Delete';
+    overlay.classList.remove('hidden');
+
+    function cleanup(result) {
+      overlay.classList.add('hidden');
+      yesBtn.removeEventListener('click', onYes);
+      noBtn.removeEventListener('click', onNo);
+      overlay.removeEventListener('click', onBackdrop);
+      resolve(result);
+    }
+    function onYes() { cleanup(true); }
+    function onNo() { cleanup(false); }
+    function onBackdrop(e) { if (e.target.id === 'confirmOverlay') cleanup(false); }
+
+    yesBtn.addEventListener('click', onYes);
+    noBtn.addEventListener('click', onNo);
+    overlay.addEventListener('click', onBackdrop);
+  });
+}
+
+const TYPE_LABELS = {
+  customer: 'Customer',
+  bundle: 'Bundle',
+  bottle: 'Bottle',
+  cap: 'Cap',
+  sticker: 'Sticker',
+  product: 'Product'
+};
+
+const ICONS = {
+  person: '<path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/><path d="M4 20c1.2-4 4.2-6 8-6s6.8 2 8 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  box: '<path d="M3 8l9-4 9 4-9 4-9-4Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 8v8l9 4 9-4V8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 12v8" stroke="currentColor" stroke-width="1.6"/>',
+  jar: '<rect x="6" y="9.5" width="12" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="7" y="5" width="10" height="4.2" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+  pump: '<rect x="8" y="9" width="8" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 9V5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M12 5h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="9.5" cy="5" r="0.9" fill="currentColor"/>',
+  spray: '<path d="M9.5 9.5h5v10a1.3 1.3 0 0 1-1.3 1.3h-2.4A1.3 1.3 0 0 1 9.5 19.5v-10Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M10.7 9.5V6.8h2.6v2.7" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="10.2" y="3.3" width="3.6" height="3" rx="0.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M16.5 5l1.8-1.1M17 7.3h2.2M16.5 9.5l1.8 1.1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>',
+  dropper: '<path d="M8.3 12.5h7.4v5.8a2 2 0 0 1-2 2h-3.4a2 2 0 0 1-2-2v-5.8Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><rect x="10.5" y="7" width="3" height="5.5" fill="none" stroke="currentColor" stroke-width="1.5"/><ellipse cx="12" cy="4.6" rx="2.1" ry="2.4" fill="none" stroke="currentColor" stroke-width="1.5"/>',
+  lipstick: '<rect x="9" y="12.5" width="6" height="7.5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 12.5l1.4-7.2h3.2l1.4 7.2Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+  tag: '<path d="M11 3h6a2 2 0 0 1 2 2v6c0 .5-.2 1-.6 1.4l-8 8a2 2 0 0 1-2.8 0l-5-5a2 2 0 0 1 0-2.8l8-8c.4-.4.9-.6 1.4-.6Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="15.5" cy="8.5" r="1.4" fill="currentColor"/>',
+  cap: '<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="1.4"/>',
+  star: '<path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.1 6.6L12 17.6l-5.8 3 1.1-6.6-4.8-4.6 6.6-.9 2.9-6Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>'
+};
+const ICON_COLORS = ['#23211D', '#2F5D62', '#B23A2E', '#C98A2B', '#6B4C6B', '#A85472'];
+
+function iconSvg(key, size) {
+  const path = ICONS[key];
+  if (!path) return '';
+  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}">${path}</svg>`;
+}
 
 function uid() {
   return 'n' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -420,43 +868,28 @@ function findParent(node, id, parent = null) {
   return null;
 }
 
-async function loadTreeOnce() {
+async function loadTree() {
   try {
-    const snap = await treeDocRef.get();
-    if (snap.exists) {
-      tree = JSON.parse(snap.data().json);
-    } else {
-      tree = defaultTree();
-      await saveTree();
-    }
-    return true;
+    const value = await idbGet(TREE_KEY);
+    tree = value ? JSON.parse(value) : defaultTree();
   } catch (e) {
     console.error('Failed to load workspace', e);
-    if (!tree) tree = defaultTree();
-    document.getElementById('loadingState').textContent = 'Could not connect. Check your internet connection and tap refresh.';
-    return false;
+    tree = defaultTree();
   }
-}
-
-async function refreshAndRender() {
-  const ok = await loadTreeOnce();
-  document.getElementById('loadingState').classList.add('hidden');
-  if (ok) render();
 }
 
 async function saveTree() {
   try {
-    await treeDocRef.set({ json: JSON.stringify(tree) });
+    await idbSet(TREE_KEY, JSON.stringify(tree));
   } catch (e) {
     console.error('Failed to save workspace', e);
-    alert('Could not save your changes. Please check your connection and try again.');
+    alert('Could not save your changes. Please try again.');
   }
 }
 
 async function getImage(nodeId) {
   try {
-    const snap = await db.collection('images').doc(nodeId).get();
-    return snap.exists ? snap.data().data : null;
+    return await idbGet('img:' + nodeId);
   } catch (e) {
     return null;
   }
@@ -464,7 +897,7 @@ async function getImage(nodeId) {
 
 async function setImage(nodeId, dataUrl) {
   try {
-    await db.collection('images').doc(nodeId).set({ data: dataUrl });
+    await idbSet('img:' + nodeId, dataUrl);
   } catch (e) {
     console.error('Failed to save image', e);
     alert('Could not save that image — it may be too large.');
@@ -473,7 +906,7 @@ async function setImage(nodeId, dataUrl) {
 
 async function deleteImage(nodeId) {
   try {
-    await db.collection('images').doc(nodeId).delete();
+    await idbDelete('img:' + nodeId);
   } catch (e) {
     // fine if it didn't exist
   }
@@ -531,16 +964,43 @@ async function renderGrid() {
       card.appendChild(img);
     }
 
+    const nameRow = document.createElement('div');
+    nameRow.className = 'name-row';
+    if (child.icon && ICONS[child.icon]) {
+      const badge = document.createElement('div');
+      badge.className = 'icon-badge';
+      badge.style.color = child.iconColor || 'var(--depth-color)';
+      badge.innerHTML = iconSvg(child.icon, 15);
+      nameRow.appendChild(badge);
+    } else if (child.iconColor) {
+      const badge = document.createElement('div');
+      badge.className = 'icon-badge';
+      badge.innerHTML = `<div style="width:11px;height:11px;border-radius:50%;background:${child.iconColor};"></div>`;
+      nameRow.appendChild(badge);
+    }
+
     const name = document.createElement('div');
     name.className = 'name';
     name.textContent = child.name;
-    card.appendChild(name);
+    nameRow.appendChild(name);
+    card.appendChild(nameRow);
 
     const meta = document.createElement('div');
     meta.className = 'meta';
-    meta.textContent = child.children.length
-      ? child.children.length + (child.children.length === 1 ? ' item inside' : ' items inside')
-      : (child.hasImage ? 'sticker' : 'empty');
+    const metaParts = [];
+    if (child.type && TYPE_LABELS[child.type]) {
+      metaParts.push(TYPE_LABELS[child.type]);
+    }
+    if (child.children.length) {
+      metaParts.push(child.children.length + (child.children.length === 1 ? ' inside' : ' items inside'));
+    }
+    if (child.amount !== undefined && child.amount !== null && child.amount !== '') {
+      metaParts.push('Qty: ' + child.amount);
+    }
+    if (!metaParts.length) {
+      metaParts.push(child.hasImage ? 'sticker' : 'empty');
+    }
+    meta.textContent = metaParts.join(' · ');
     card.appendChild(meta);
 
     const editBtn = document.createElement('div');
@@ -573,6 +1033,54 @@ function render() {
   renderGrid();
 }
 
+function updateIconPreview() {
+  const preview = document.getElementById('iconPreview');
+  if (selectedIcon) {
+    preview.style.color = selectedIconColor || 'var(--ink-soft)';
+    preview.innerHTML = iconSvg(selectedIcon, 20);
+  } else if (selectedIconColor) {
+    preview.style.color = selectedIconColor;
+    preview.innerHTML = '<div style="width:14px;height:14px;border-radius:50%;background:currentColor;"></div>';
+  } else {
+    preview.style.color = 'var(--ink-soft)';
+    preview.innerHTML = '<span style="font-size:11px;">none</span>';
+  }
+}
+
+function renderIconPicker() {
+  const grid = document.getElementById('iconGrid');
+  grid.innerHTML = '';
+  Object.keys(ICONS).forEach(key => {
+    const btn = document.createElement('div');
+    btn.className = 'icon-choice' + (selectedIcon === key ? ' selected' : '');
+    btn.innerHTML = iconSvg(key, 20);
+    btn.addEventListener('click', () => {
+      selectedIcon = (selectedIcon === key) ? null : key;
+      if (selectedIcon && !selectedIconColor) selectedIconColor = ICON_COLORS[1];
+      renderIconPicker();
+      renderColorPicker();
+      updateIconPreview();
+    });
+    grid.appendChild(btn);
+  });
+}
+
+function renderColorPicker() {
+  const row = document.getElementById('colorRow');
+  row.innerHTML = '';
+  ICON_COLORS.forEach(hex => {
+    const sw = document.createElement('div');
+    sw.className = 'color-swatch' + (selectedIconColor === hex ? ' selected' : '');
+    sw.style.background = hex;
+    sw.addEventListener('click', () => {
+      selectedIconColor = (selectedIconColor === hex) ? null : hex;
+      renderColorPicker();
+      updateIconPreview();
+    });
+    row.appendChild(sw);
+  });
+}
+
 function openSheet(nodeId) {
   editingNodeId = nodeId;
   pendingImageData = null;
@@ -581,6 +1089,8 @@ function openSheet(nodeId) {
   const overlay = document.getElementById('overlay');
   const title = document.getElementById('sheetTitle');
   const nameInput = document.getElementById('nameInput');
+  const typeInput = document.getElementById('typeInput');
+  const amountInput = document.getElementById('amountInput');
   const preview = document.getElementById('imagePreview');
   const removeBtn = document.getElementById('removeImgBtn');
   const deleteBtn = document.getElementById('deleteBtn');
@@ -595,7 +1105,11 @@ function openSheet(nodeId) {
     const node = findNode(tree, nodeId);
     title.textContent = 'Edit';
     nameInput.value = node.name;
+    typeInput.value = node.type || '';
+    amountInput.value = (node.amount !== undefined && node.amount !== null) ? node.amount : '';
     deleteBtn.classList.remove('hidden');
+    selectedIcon = node.icon || null;
+    selectedIconColor = node.iconColor || null;
     if (node.hasImage) {
       getImage(nodeId).then(data => {
         if (data) {
@@ -608,8 +1122,16 @@ function openSheet(nodeId) {
   } else {
     title.textContent = 'New item';
     nameInput.value = '';
+    typeInput.value = '';
+    amountInput.value = '';
     deleteBtn.classList.add('hidden');
+    selectedIcon = null;
+    selectedIconColor = null;
   }
+
+  renderIconPicker();
+  renderColorPicker();
+  updateIconPreview();
 
   overlay.classList.remove('hidden');
   setTimeout(() => nameInput.focus(), 50);
@@ -681,12 +1203,20 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
   saveBtn.disabled = true;
   saveBtn.textContent = 'Saving…';
 
+  const amountRaw = document.getElementById('amountInput').value;
+  const amount = amountRaw === '' ? null : Number(amountRaw);
+  const type = document.getElementById('typeInput').value || null;
+
   const currentId = path[path.length - 1];
   const parentNode = findNode(tree, currentId);
 
   if (editingNodeId) {
     const node = findNode(tree, editingNodeId);
     node.name = name;
+    node.icon = selectedIcon;
+    node.iconColor = selectedIconColor;
+    node.amount = amount;
+    node.type = type;
     if (pendingImageData) {
       await setImage(editingNodeId, pendingImageData);
       node.hasImage = true;
@@ -695,7 +1225,7 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
       node.hasImage = false;
     }
   } else {
-    const newNode = { id: uid(), name, children: [], hasImage: false };
+    const newNode = { id: uid(), name, children: [], hasImage: false, icon: selectedIcon, iconColor: selectedIconColor, amount: amount, type: type };
     if (pendingImageData) {
       await setImage(newNode.id, pendingImageData);
       newNode.hasImage = true;
@@ -716,9 +1246,14 @@ document.getElementById('deleteBtn').addEventListener('click', async () => {
   const msg = count
     ? `Delete "${node.name}" and everything inside it (${count} item${count === 1 ? '' : 's'})?`
     : `Delete "${node.name}"?`;
-  if (!confirm(msg)) return;
+  const ok = await customConfirm(msg, 'Delete');
+  if (!ok) return;
 
   const parent = findParent(tree, editingNodeId);
+  if (!parent) {
+    alert('Could not find this item to delete it. Please refresh and try again.');
+    return;
+  }
   const imageIds = countDescendantImages(node, []);
   for (const id of imageIds) await deleteImage(id);
 
@@ -728,17 +1263,9 @@ document.getElementById('deleteBtn').addEventListener('click', async () => {
   render();
 });
 
-document.getElementById('refreshBtn').addEventListener('click', async () => {
-  const btn = document.getElementById('refreshBtn');
-  btn.textContent = 'refreshing…';
-  await loadTreeOnce();
-  path = ['root'];
-  render();
-  btn.textContent = 'refresh';
-});
-
 document.getElementById('resetBtn').addEventListener('click', async () => {
-  if (!confirm('Erase everything in your workspace? This cannot be undone.')) return;
+  const ok = await customConfirm('Erase everything in your workspace? This cannot be undone.', 'Erase all');
+  if (!ok) return;
   const allImageIds = countDescendantImages(tree, []);
   for (const id of allImageIds) await deleteImage(id);
   tree = defaultTree();
@@ -747,7 +1274,523 @@ document.getElementById('resetBtn').addEventListener('click', async () => {
   render();
 });
 
-refreshAndRender();
+/* ---------- Storage (Stickers & Cartons) ---------- */
+
+const STICKERS_KEY = 'storage-stickers';
+const CARTONS_KEY = 'storage-cartons';
+const HISTORY_KEY = 'storage-history';
+
+let activeSection = 'workspace';
+let activeStorageTab = 'stickers';
+let stickers = [];
+let cartons = [];
+let historyLog = [];
+let editingStorageId = null;
+let editingStorageType = null; // 'sticker' | 'carton'
+let pendingStorageImageData = null;
+let removeStorageImageFlag = false;
+let actionMenuItemId = null;
+let actionMenuItemType = null;
+
+async function loadHistory() {
+  try {
+    const h = await idbGet(HISTORY_KEY);
+    historyLog = h ? JSON.parse(h) : [];
+  } catch (e) { historyLog = []; }
+}
+
+async function saveHistory() {
+  try {
+    if (historyLog.length > 500) historyLog = historyLog.slice(historyLog.length - 500);
+    await idbSet(HISTORY_KEY, JSON.stringify(historyLog));
+  } catch (e) { /* non-critical, don't block the user's action */ }
+}
+
+async function logHistory(itemType, itemId, itemName, action, details) {
+  historyLog.push({
+    id: uid(),
+    itemType,
+    itemId,
+    itemName,
+    action,
+    details,
+    ts: Date.now()
+  });
+  await saveHistory();
+}
+
+function formatHistoryTime(ts) {
+  const d = new Date(ts);
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ', ' +
+    d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+}
+
+async function loadStorage() {
+  try {
+    const s = await idbGet(STICKERS_KEY);
+    stickers = s ? JSON.parse(s) : [];
+  } catch (e) { stickers = []; }
+  try {
+    const c = await idbGet(CARTONS_KEY);
+    cartons = c ? JSON.parse(c) : [];
+  } catch (e) { cartons = []; }
+}
+
+async function saveStickers() {
+  try { await idbSet(STICKERS_KEY, JSON.stringify(stickers)); }
+  catch (e) { alert('Could not save. Please try again.'); }
+}
+
+async function saveCartons() {
+  try { await idbSet(CARTONS_KEY, JSON.stringify(cartons)); }
+  catch (e) { alert('Could not save. Please try again.'); }
+}
+
+async function getStorageImage(id) {
+  try { return await idbGet('stickerimg:' + id); } catch (e) { return null; }
+}
+async function setStorageImage(id, dataUrl) {
+  try { await idbSet('stickerimg:' + id, dataUrl); }
+  catch (e) { alert('Could not save that image — it may be too large.'); }
+}
+async function deleteStorageImage(id) {
+  try { await idbDelete('stickerimg:' + id); } catch (e) {}
+}
+
+function openActionMenu(itemId, type, itemName) {
+  actionMenuItemId = itemId;
+  actionMenuItemType = type;
+  document.getElementById('actionMenuTitle').textContent = itemName;
+  document.getElementById('actionMenuOverlay').classList.remove('hidden');
+}
+
+function closeActionMenu() {
+  document.getElementById('actionMenuOverlay').classList.add('hidden');
+  actionMenuItemId = null;
+  actionMenuItemType = null;
+}
+
+document.getElementById('actionMenuCancelBtn').addEventListener('click', closeActionMenu);
+document.getElementById('actionMenuOverlay').addEventListener('click', (e) => {
+  if (e.target.id === 'actionMenuOverlay') closeActionMenu();
+});
+document.getElementById('actionEditBtn').addEventListener('click', () => {
+  const id = actionMenuItemId, type = actionMenuItemType;
+  closeActionMenu();
+  openStorageSheet(id, type);
+});
+document.getElementById('actionHistoryBtn').addEventListener('click', () => {
+  const id = actionMenuItemId, type = actionMenuItemType;
+  const list = type === 'sticker' ? stickers : cartons;
+  const item = list.find(x => x.id === id);
+  closeActionMenu();
+  openHistoryOverlay(id, item ? item.name : '');
+});
+
+function renderHistoryList(filterItemId) {
+  const container = document.getElementById('historyList');
+  container.innerHTML = '';
+  const title = document.getElementById('historyTitle');
+  title.textContent = filterItemId ? 'History' : 'All storage history';
+
+  let entries = historyLog.filter(e => !filterItemId || e.itemId === filterItemId);
+  entries = entries.slice().sort((a, b) => b.ts - a.ts);
+
+  if (!entries.length) {
+    const note = document.createElement('div');
+    note.className = 'empty-note';
+    note.style.padding = '10px 0';
+    note.textContent = 'No history yet.';
+    container.appendChild(note);
+    return;
+  }
+
+  entries.forEach(entry => {
+    const row = document.createElement('div');
+    row.className = 'history-entry';
+
+    const top = document.createElement('div');
+    top.className = 'history-top';
+    const badge = document.createElement('span');
+    badge.className = 'history-action ' + entry.action;
+    badge.textContent = entry.action.charAt(0).toUpperCase() + entry.action.slice(1);
+    const time = document.createElement('span');
+    time.className = 'history-time';
+    time.textContent = formatHistoryTime(entry.ts);
+    top.appendChild(badge);
+    top.appendChild(time);
+    row.appendChild(top);
+
+    if (!filterItemId) {
+      const name = document.createElement('div');
+      name.className = 'history-name';
+      name.textContent = entry.itemName + (entry.itemType === 'carton' ? ' (carton)' : ' (sticker)');
+      row.appendChild(name);
+    }
+
+    if (entry.details) {
+      const details = document.createElement('div');
+      details.className = 'history-details';
+      details.textContent = entry.details;
+      row.appendChild(details);
+    }
+
+    container.appendChild(row);
+  });
+}
+
+function openHistoryOverlay(itemId, itemName) {
+  renderHistoryList(itemId || null);
+  document.getElementById('historyOverlay').classList.remove('hidden');
+}
+
+function closeHistoryOverlay() {
+  document.getElementById('historyOverlay').classList.add('hidden');
+}
+
+document.getElementById('historyCloseBtn').addEventListener('click', closeHistoryOverlay);
+document.getElementById('historyOverlay').addEventListener('click', (e) => {
+  if (e.target.id === 'historyOverlay') closeHistoryOverlay();
+});
+document.getElementById('storageHistoryBtn').addEventListener('click', () => openHistoryOverlay(null, null));
+
+function switchSection(section) {
+  activeSection = section;
+  document.getElementById('workspaceSection').classList.toggle('hidden', section !== 'workspace');
+  document.getElementById('storageSection').classList.toggle('hidden', section !== 'storage');
+  document.getElementById('tabWorkspaceBtn').classList.toggle('active', section === 'workspace');
+  document.getElementById('tabStorageBtn').classList.toggle('active', section === 'storage');
+  if (section === 'storage') renderStorageGrid();
+}
+
+function switchStorageTab(tab) {
+  activeStorageTab = tab;
+  document.getElementById('tabStickersBtn').classList.toggle('active', tab === 'stickers');
+  document.getElementById('tabCartonsBtn').classList.toggle('active', tab === 'cartons');
+  renderStorageGrid();
+}
+
+document.getElementById('tabWorkspaceBtn').addEventListener('click', () => switchSection('workspace'));
+document.getElementById('tabStorageBtn').addEventListener('click', () => switchSection('storage'));
+document.getElementById('tabStickersBtn').addEventListener('click', () => switchStorageTab('stickers'));
+document.getElementById('tabCartonsBtn').addEventListener('click', () => switchStorageTab('cartons'));
+
+function renderStorageGrid() {
+  const grid = document.getElementById('storageGrid');
+  grid.innerHTML = '';
+  const list = activeStorageTab === 'stickers' ? stickers : cartons;
+  const color = 'var(--accent-2)';
+
+  if (!list.length) {
+    const note = document.createElement('div');
+    note.className = 'empty-note';
+    note.textContent = activeStorageTab === 'stickers'
+      ? 'No stickers logged yet. Add the first one below.'
+      : 'No cartons logged yet. Add the first one below.';
+    grid.appendChild(note);
+  }
+
+  list.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.setProperty('--depth-color', color);
+    card.style.cursor = 'default';
+
+    if (activeStorageTab === 'stickers') {
+      if (item.hasImage) {
+        const img = document.createElement('img');
+        img.className = 'thumb';
+        img.alt = item.name;
+        getStorageImage(item.id).then(data => { if (data) img.src = data; });
+        card.appendChild(img);
+      }
+      const name = document.createElement('div');
+      name.className = 'name';
+      name.textContent = item.name;
+      card.appendChild(name);
+
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      meta.textContent = (item.amount !== null && item.amount !== undefined) ? 'Qty: ' + item.amount : 'no amount set';
+      card.appendChild(meta);
+    } else {
+      const name = document.createElement('div');
+      name.className = 'name';
+      name.textContent = item.name;
+      card.appendChild(name);
+
+      const total = (item.unitsPerCarton || 0) * (item.cartonCount || 0) + (item.extraPieces || 0);
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      const extraText = item.extraPieces ? ` + ${item.extraPieces} loose` : '';
+      meta.textContent = `${item.unitsPerCarton || 0}/carton · ${item.cartonCount || 0} cartons${extraText} · ${total} total`;
+      card.appendChild(meta);
+    }
+
+    const editBtn = document.createElement('div');
+    editBtn.className = 'edit-btn';
+    editBtn.textContent = '⋯';
+    editBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openActionMenu(item.id, activeStorageTab === 'stickers' ? 'sticker' : 'carton', item.name);
+    });
+    card.appendChild(editBtn);
+
+    grid.appendChild(card);
+  });
+
+  const addCard = document.createElement('div');
+  addCard.className = 'card add-card';
+  addCard.style.setProperty('--depth-color', color);
+  addCard.innerHTML = '<div class="plus">+</div><div class="label">Add new</div>';
+  addCard.addEventListener('click', () => openStorageSheet(null, activeStorageTab === 'stickers' ? 'sticker' : 'carton'));
+  grid.appendChild(addCard);
+}
+
+function updateCartonTotalPreview() {
+  const units = Number(document.getElementById('unitsPerCartonInput').value) || 0;
+  const cartonCount = Number(document.getElementById('cartonCountInput').value) || 0;
+  const extra = Number(document.getElementById('extraPiecesInput').value) || 0;
+  document.getElementById('cartonTotalPreview').textContent = 'Total: ' + (units * cartonCount + extra) + ' units';
+}
+document.getElementById('unitsPerCartonInput').addEventListener('input', updateCartonTotalPreview);
+document.getElementById('cartonCountInput').addEventListener('input', updateCartonTotalPreview);
+document.getElementById('extraPiecesInput').addEventListener('input', updateCartonTotalPreview);
+
+function openStorageSheet(id, type) {
+  editingStorageId = id;
+  editingStorageType = type;
+  pendingStorageImageData = null;
+  removeStorageImageFlag = false;
+
+  const overlay = document.getElementById('storageOverlay');
+  const title = document.getElementById('storageSheetTitle');
+  const nameInput = document.getElementById('storageNameInput');
+  const amountInput = document.getElementById('storageAmountInput');
+  const unitsInput = document.getElementById('unitsPerCartonInput');
+  const cartonCountInput = document.getElementById('cartonCountInput');
+  const extraPiecesInput = document.getElementById('extraPiecesInput');
+  const preview = document.getElementById('storageImagePreview');
+  const removeBtn = document.getElementById('storageRemoveImgBtn');
+  const deleteBtn = document.getElementById('storageDeleteBtn');
+  document.getElementById('storageSheet').style.setProperty('--depth-color', 'var(--accent-2)');
+
+  preview.classList.add('hidden');
+  removeBtn.classList.add('hidden');
+  preview.src = '';
+
+  document.getElementById('storageStickerFields').classList.toggle('hidden', type !== 'sticker');
+  document.getElementById('storageCartonFields').classList.toggle('hidden', type !== 'carton');
+
+  if (id) {
+    const list = type === 'sticker' ? stickers : cartons;
+    const item = list.find(x => x.id === id);
+    title.textContent = 'Edit ' + (type === 'sticker' ? 'sticker' : 'carton');
+    nameInput.value = item.name;
+    deleteBtn.classList.remove('hidden');
+    if (type === 'sticker') {
+      amountInput.value = (item.amount !== null && item.amount !== undefined) ? item.amount : '';
+      if (item.hasImage) {
+        getStorageImage(id).then(data => {
+          if (data) {
+            preview.src = data;
+            preview.classList.remove('hidden');
+            removeBtn.classList.remove('hidden');
+          }
+        });
+      }
+    } else {
+      unitsInput.value = item.unitsPerCarton !== undefined ? item.unitsPerCarton : '';
+      cartonCountInput.value = item.cartonCount !== undefined ? item.cartonCount : '';
+      extraPiecesInput.value = item.extraPieces !== undefined ? item.extraPieces : '';
+      updateCartonTotalPreview();
+    }
+  } else {
+    title.textContent = type === 'sticker' ? 'New sticker' : 'New carton';
+    nameInput.value = '';
+    amountInput.value = '';
+    unitsInput.value = '';
+    cartonCountInput.value = '';
+    extraPiecesInput.value = '';
+    updateCartonTotalPreview();
+    deleteBtn.classList.add('hidden');
+  }
+
+  overlay.classList.remove('hidden');
+  setTimeout(() => nameInput.focus(), 50);
+}
+
+function closeStorageSheet() {
+  document.getElementById('storageOverlay').classList.add('hidden');
+  editingStorageId = null;
+  editingStorageType = null;
+  pendingStorageImageData = null;
+  removeStorageImageFlag = false;
+  document.getElementById('storageFileInput').value = '';
+}
+
+document.getElementById('storageCancelBtn').addEventListener('click', closeStorageSheet);
+document.getElementById('storageOverlay').addEventListener('click', (e) => {
+  if (e.target.id === 'storageOverlay') closeStorageSheet();
+});
+
+document.getElementById('storageChooseFileBtn').addEventListener('click', () => {
+  document.getElementById('storageFileInput').click();
+});
+
+document.getElementById('storageFileInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const maxDim = 900;
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        const scale = maxDim / Math.max(width, height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      pendingStorageImageData = canvas.toDataURL('image/jpeg', 0.82);
+      removeStorageImageFlag = false;
+      const preview = document.getElementById('storageImagePreview');
+      preview.src = pendingStorageImageData;
+      preview.classList.remove('hidden');
+      document.getElementById('storageRemoveImgBtn').classList.remove('hidden');
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('storageRemoveImgBtn').addEventListener('click', () => {
+  pendingStorageImageData = null;
+  removeStorageImageFlag = true;
+  document.getElementById('storageImagePreview').classList.add('hidden');
+  document.getElementById('storageRemoveImgBtn').classList.add('hidden');
+  document.getElementById('storageFileInput').value = '';
+});
+
+document.getElementById('storageSaveBtn').addEventListener('click', async () => {
+  const name = document.getElementById('storageNameInput').value.trim();
+  if (!name) { alert('Give it a name first.'); return; }
+
+  const saveBtn = document.getElementById('storageSaveBtn');
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Saving…';
+
+  if (editingStorageType === 'sticker') {
+    const amountRaw = document.getElementById('storageAmountInput').value;
+    const amount = amountRaw === '' ? null : Number(amountRaw);
+
+    if (editingStorageId) {
+      const item = stickers.find(x => x.id === editingStorageId);
+      const oldName = item.name, oldAmount = item.amount;
+      item.name = name;
+      item.amount = amount;
+      const changeParts = [];
+      if (oldName !== name) changeParts.push(`Name: "${oldName}" → "${name}"`);
+      if (oldAmount !== amount) changeParts.push(`Qty: ${oldAmount ?? '—'} → ${amount ?? '—'}`);
+      if (pendingStorageImageData) {
+        await setStorageImage(editingStorageId, pendingStorageImageData);
+        item.hasImage = true;
+        changeParts.push('Picture updated');
+      } else if (removeStorageImageFlag) {
+        await deleteStorageImage(editingStorageId);
+        item.hasImage = false;
+        changeParts.push('Picture removed');
+      }
+      await logHistory('sticker', editingStorageId, name, 'edited', changeParts.length ? changeParts.join(', ') : 'No changes');
+    } else {
+      const newItem = { id: uid(), name, amount, hasImage: false };
+      if (pendingStorageImageData) {
+        await setStorageImage(newItem.id, pendingStorageImageData);
+        newItem.hasImage = true;
+      }
+      stickers.push(newItem);
+      await logHistory('sticker', newItem.id, name, 'added', `Qty: ${amount ?? '—'}` + (newItem.hasImage ? ', with picture' : ''));
+    }
+    await saveStickers();
+  } else {
+    const unitsRaw = document.getElementById('unitsPerCartonInput').value;
+    const cartonRaw = document.getElementById('cartonCountInput').value;
+    const extraRaw = document.getElementById('extraPiecesInput').value;
+    const unitsPerCarton = unitsRaw === '' ? 0 : Number(unitsRaw);
+    const cartonCount = cartonRaw === '' ? 0 : Number(cartonRaw);
+    const extraPieces = extraRaw === '' ? 0 : Number(extraRaw);
+
+    if (editingStorageId) {
+      const item = cartons.find(x => x.id === editingStorageId);
+      const oldName = item.name, oldUnits = item.unitsPerCarton, oldCount = item.cartonCount, oldExtra = item.extraPieces || 0;
+      item.name = name;
+      item.unitsPerCarton = unitsPerCarton;
+      item.cartonCount = cartonCount;
+      item.extraPieces = extraPieces;
+      const changeParts = [];
+      if (oldName !== name) changeParts.push(`Name: "${oldName}" → "${name}"`);
+      if (oldUnits !== unitsPerCarton) changeParts.push(`Units/carton: ${oldUnits} → ${unitsPerCarton}`);
+      if (oldCount !== cartonCount) changeParts.push(`Cartons: ${oldCount} → ${cartonCount}`);
+      if (oldExtra !== extraPieces) changeParts.push(`Loose pieces: ${oldExtra} → ${extraPieces}`);
+      await logHistory('carton', editingStorageId, name, 'edited', changeParts.length ? changeParts.join(', ') : 'No changes');
+    } else {
+      const newItem = { id: uid(), name, unitsPerCarton, cartonCount, extraPieces };
+      cartons.push(newItem);
+      const total = unitsPerCarton * cartonCount + extraPieces;
+      await logHistory('carton', newItem.id, name, 'added', `${cartonCount} cartons × ${unitsPerCarton}/carton` + (extraPieces ? ` + ${extraPieces} loose` : '') + ` = ${total} total`);
+    }
+    await saveCartons();
+  }
+
+  saveBtn.disabled = false;
+  saveBtn.textContent = 'Save';
+  closeStorageSheet();
+  renderStorageGrid();
+});
+
+document.getElementById('storageDeleteBtn').addEventListener('click', async () => {
+  const type = editingStorageType;
+  const list = type === 'sticker' ? stickers : cartons;
+  const item = list.find(x => x.id === editingStorageId);
+  const ok = await customConfirm(`Delete "${item.name}"?`, 'Delete');
+  if (!ok) return;
+
+  if (type === 'sticker' && item.hasImage) {
+    await deleteStorageImage(editingStorageId);
+  }
+
+  const summary = type === 'sticker'
+    ? `Had qty: ${item.amount ?? '—'}`
+    : `Had ${item.cartonCount || 0} cartons × ${item.unitsPerCarton || 0}/carton` + (item.extraPieces ? ` + ${item.extraPieces} loose` : '');
+  await logHistory(type, editingStorageId, item.name, 'removed', summary);
+
+  if (type === 'sticker') {
+    stickers = stickers.filter(x => x.id !== editingStorageId);
+    await saveStickers();
+  } else {
+    cartons = cartons.filter(x => x.id !== editingStorageId);
+    await saveCartons();
+  }
+
+  closeStorageSheet();
+  renderStorageGrid();
+});
+
+/* ---------- End Storage ---------- */
+
+async function init() {
+  await loadTree();
+  await loadStorage();
+  await loadHistory();
+  document.getElementById('loadingState').classList.add('hidden');
+  render();
+}
+
+init();
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
