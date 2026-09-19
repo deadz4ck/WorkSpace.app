@@ -554,6 +554,156 @@ body {
   font-size: 12.5px;
   color: var(--ink-soft);
 }
+
+.auth-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  position: relative;
+  z-index: 1;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 28px 24px;
+  text-align: center;
+}
+
+.auth-logo {
+  width: 100%;
+  max-width: 260px;
+  margin: 0 auto 6px;
+  display: block;
+}
+.auth-logo.small { max-width: 170px; margin-bottom: 14px; }
+
+.auth-tagline {
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  margin: 4px 0 22px;
+}
+
+.auth-btn-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.auth-title {
+  font-family: 'Roboto Slab', serif;
+  font-size: 20px;
+  margin: 0 0 18px;
+  text-align: left;
+}
+
+.auth-card input[type="text"],
+.auth-card input[type="password"] {
+  width: 100%;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--ink);
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.auth-card .field-label { text-align: left; }
+
+.auth-error {
+  background: rgba(178,58,46,0.08);
+  color: var(--accent-2);
+  font-size: 12.5px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  margin-bottom: 14px;
+  text-align: left;
+}
+
+.auth-switch {
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-top: 14px;
+}
+.auth-switch a { color: var(--accent-2); text-decoration: underline; }
+
+.user-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-bottom: 14px;
+}
+
+.admin-note {
+  font-size: 12px;
+  color: var(--ink-soft);
+  background: var(--paper);
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 14px;
+}
+
+.admin-block-title {
+  font-family: 'Roboto Slab', serif;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 22px 0 8px;
+  display: flex;
+  align-items: center;
+}
+.admin-block-title:first-of-type { margin-top: 4px; }
+
+.alert-row {
+  border: 1px solid var(--accent-2);
+  background: rgba(178,58,46,0.06);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.alert-row .alert-sub { color: var(--ink-soft); font-size: 11.5px; }
+
+.promoter-group {
+  margin-bottom: 22px;
+}
+
+.promoter-group-title {
+  font-family: 'Roboto Slab', serif;
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.promoter-group-title .sub {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+
+.sale-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13.5px;
+}
+.sale-row:last-child { border-bottom: none; }
+.sale-row .sale-meta { color: var(--ink-soft); font-size: 11.5px; }
 </style>
 </head>
 <body>
@@ -566,10 +716,61 @@ body {
   <path d="M 60 380 C 140 360, 130 440, 60 450" stroke="#B23A2E" stroke-width="1.2" fill="none" opacity="0.07"/>
 </svg>
 
+<div id="landingView" class="auth-screen">
+  <div class="auth-card">
+    <img src="logo.webp" alt="WorkSpace" class="auth-logo" />
+    <p class="auth-tagline">Organize your stock, stickers, and sales — all in one place.</p>
+    <div class="auth-btn-row">
+      <button class="btn btn-primary" id="goLoginBtn">Log In</button>
+      <button class="btn btn-secondary" id="goSignupBtn">Sign Up</button>
+    </div>
+  </div>
+</div>
+
+<div id="loginView" class="auth-screen hidden">
+  <div class="auth-card">
+    <img src="logo.webp" alt="WorkSpace" class="auth-logo small" />
+    <h2 class="auth-title">Log In</h2>
+    <span class="field-label">Phone number</span>
+    <input type="tel" id="loginEmail" placeholder="01xxxxxxxxx" />
+    <span class="field-label">Password</span>
+    <input type="password" id="loginPassword" placeholder="••••••••" />
+    <div class="auth-error hidden" id="loginError"></div>
+    <button class="btn btn-primary" id="loginSubmitBtn" style="width:100%; margin-top:6px;">Log In</button>
+    <p class="auth-switch">No account? <a href="#" id="toSignupLink">Sign up</a></p>
+    <p class="auth-switch"><a href="#" id="loginBackLink">← Back</a></p>
+  </div>
+</div>
+
+<div id="signupView" class="auth-screen hidden">
+  <div class="auth-card">
+    <img src="logo.webp" alt="WorkSpace" class="auth-logo small" />
+    <h2 class="auth-title">Sign Up</h2>
+    <span class="field-label">Name</span>
+    <input type="text" id="signupName" placeholder="Your name" />
+    <span class="field-label">Phone number</span>
+    <input type="tel" id="signupEmail" placeholder="01xxxxxxxxx" />
+    <span class="field-label">Password</span>
+    <input type="password" id="signupPassword" placeholder="••••••••" />
+    <div class="auth-error hidden" id="signupError"></div>
+    <button class="btn btn-primary" id="signupSubmitBtn" style="width:100%; margin-top:6px;">Create Account</button>
+    <p class="auth-switch">Already have an account? <a href="#" id="toLoginLink">Log in</a></p>
+    <p class="auth-switch"><a href="#" id="signupBackLink">← Back</a></p>
+  </div>
+</div>
+
+<div id="mainApp" class="hidden">
 <div class="app">
+  <div class="user-bar">
+    <span id="userGreeting"></span>
+    <button class="reset-link" id="logoutBtn">log out</button>
+  </div>
+
   <div class="section-tabs">
     <button class="section-tab active" id="tabWorkspaceBtn">Workspace</button>
     <button class="section-tab" id="tabStorageBtn">Storage</button>
+    <button class="section-tab" id="tabSalesBtn">Sales</button>
+    <button class="section-tab hidden" id="tabAdminBtn">Admin</button>
   </div>
 
   <div id="workspaceSection">
@@ -609,6 +810,81 @@ body {
 
     <div class="grid" id="storageGrid"></div>
   </div>
+
+  <div id="salesSection" class="hidden">
+    <div class="header">
+      <div class="wordmark">
+        <span class="work">Sal</span><span class="space">es</span>
+        <svg class="flourish" viewBox="0 0 190 34" xmlns="http://www.w3.org/2000/svg">
+          <path d="M 4 18 C 40 34, 90 34, 120 16 C 145 2, 168 8, 172 20 C 175 28, 165 30, 160 24 C 156 19, 162 15, 168 18 C 176 22, 174 30, 165 30"
+            stroke="#B23A2E" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+    <div class="carton-total" id="salesTotalPreviewCard">Total sold: 0 units</div>
+    <div class="grid" id="salesGrid"></div>
+  </div>
+
+  <div id="adminSection" class="hidden">
+    <div class="header">
+      <div class="wordmark">
+        <span class="work">Adm</span><span class="space">in</span>
+        <svg class="flourish" viewBox="0 0 190 34" xmlns="http://www.w3.org/2000/svg">
+          <path d="M 4 18 C 40 34, 90 34, 120 16 C 145 2, 168 8, 172 20 C 175 28, 165 30, 160 24 C 156 19, 162 15, 168 18 C 176 22, 174 30, 165 30"
+            stroke="#B23A2E" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+    <p class="admin-note">Showing data logged on this device only, until the shared backend is connected.</p>
+
+    <div class="admin-block-title">Low-stock alerts</div>
+    <div id="adminAlertsList"></div>
+
+    <div class="admin-block-title">
+      Stock by promoter
+      <button class="reset-link" id="assignStockBtn" style="margin-left:10px;">+ assign stock</button>
+    </div>
+    <div id="adminStockList"></div>
+
+    <div class="admin-block-title">Recent activity</div>
+    <div id="adminActivityList"></div>
+
+    <div class="admin-block-title">Sales by promoter</div>
+    <div class="carton-total" id="adminTotalPreviewCard">Total sold (all promoters): 0 units</div>
+    <div id="adminSalesList"></div>
+  </div>
+</div>
+</div>
+
+<div class="overlay hidden" id="assignStockOverlay">
+  <div class="sheet" id="assignStockSheet">
+    <h2>Assign stock to a promoter</h2>
+    <span class="field-label">Promoter</span>
+    <select id="assignPromoterSelect"></select>
+
+    <span class="field-label">Product name</span>
+    <input type="text" id="assignNameInput" placeholder="e.g. Rose Shampoo 250ml" />
+
+    <span class="field-label">Client / store (optional)</span>
+    <input type="text" id="assignClientInput" placeholder="e.g. Zamalek Branch" />
+
+    <span class="field-label">Units per carton</span>
+    <input type="number" id="assignUnitsInput" placeholder="e.g. 12" min="0" step="1" />
+
+    <span class="field-label">Number of cartons</span>
+    <input type="number" id="assignCartonCountInput" placeholder="e.g. 30" min="0" step="1" />
+
+    <span class="field-label">Extra loose pieces</span>
+    <input type="number" id="assignExtraInput" placeholder="e.g. 7" min="0" step="1" />
+
+    <span class="field-label">Low-stock alert when remaining falls to (optional)</span>
+    <input type="number" id="assignThresholdInput" placeholder="e.g. 30" min="0" step="1" />
+
+    <div class="sheet-actions">
+      <button class="btn btn-secondary" id="assignCancelBtn">Cancel</button>
+      <button class="btn btn-primary" id="assignSaveBtn">Assign</button>
+    </div>
+  </div>
 </div>
 
 <div class="overlay hidden" id="overlay">
@@ -616,6 +892,7 @@ body {
     <h2 id="sheetTitle">New item</h2>
     <span class="field-label">Name</span>
     <input type="text" id="nameInput" placeholder="e.g. Ahmed's Bottles, 500ml Round, Front Label" />
+
 
     <span class="field-label">Type (optional)</span>
     <select id="typeInput">
@@ -686,6 +963,10 @@ body {
     </div>
 
     <div id="storageCartonFields" class="hidden">
+      <span class="field-label">Client / store (optional)</span>
+      <input type="text" id="cartonClientInput" list="clientNameList" placeholder="e.g. Zamalek Branch" />
+      <datalist id="clientNameList"></datalist>
+
       <span class="field-label">Units per carton</span>
       <input type="number" id="unitsPerCartonInput" placeholder="e.g. 12" min="0" step="1" />
 
@@ -695,6 +976,9 @@ body {
       <span class="field-label">Extra loose pieces (not in a full carton)</span>
       <input type="number" id="extraPiecesInput" placeholder="e.g. 7" min="0" step="1" />
 
+      <span class="field-label">Low-stock alert when remaining falls to (optional)</span>
+      <input type="number" id="cartonThresholdInput" placeholder="e.g. 30" min="0" step="1" />
+
       <div class="carton-total" id="cartonTotalPreview">Total: 0 units</div>
     </div>
 
@@ -702,6 +986,34 @@ body {
       <button class="btn btn-danger hidden" id="storageDeleteBtn">Delete</button>
       <button class="btn btn-secondary" id="storageCancelBtn">Cancel</button>
       <button class="btn btn-primary" id="storageSaveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="salesOverlay">
+  <div class="sheet" id="salesSheet">
+    <h2 id="salesSheetTitle">New sale</h2>
+    <span class="field-label">Product (from your Cartons, optional)</span>
+    <select id="salesCartonSelect">
+      <option value="">— type manually —</option>
+    </select>
+
+    <span class="field-label">Product name</span>
+    <input type="text" id="salesProductInput" placeholder="e.g. Rose Shampoo 250ml" />
+
+    <span class="field-label">Client / store (optional)</span>
+    <input type="text" id="salesClientInput" placeholder="e.g. Zamalek Branch" />
+
+    <span class="field-label">Quantity sold</span>
+    <input type="number" id="salesQtyInput" placeholder="e.g. 5" min="0" step="1" />
+
+    <span class="field-label">Note (optional)</span>
+    <input type="text" id="salesNoteInput" placeholder="e.g. Client name, order #" />
+
+    <div class="sheet-actions">
+      <button class="btn btn-danger hidden" id="salesDeleteBtn">Delete</button>
+      <button class="btn btn-secondary" id="salesCancelBtn">Cancel</button>
+      <button class="btn btn-primary" id="salesSaveBtn">Save</button>
     </div>
   </div>
 </div>
@@ -777,6 +1089,129 @@ function idbDelete(key) {
     tx.onerror = () => reject(tx.error);
   }));
 }
+
+const USERS_KEY = 'app-users';
+const SESSION_KEY = 'app-session';
+let currentUser = null;
+let allUsers = [];
+
+async function loadUsers() {
+  try {
+    const u = await idbGet(USERS_KEY);
+    allUsers = u ? JSON.parse(u) : [];
+  } catch (e) { allUsers = []; }
+  if (!allUsers.length) {
+    allUsers.push({ id: 'admin', name: 'Admin', email: '01000000000', password: 'admin123', role: 'admin' });
+    await idbSet(USERS_KEY, JSON.stringify(allUsers));
+  }
+}
+
+async function saveUsers() {
+  await idbSet(USERS_KEY, JSON.stringify(allUsers));
+}
+
+function showAuthScreen(which) {
+  document.getElementById('landingView').classList.toggle('hidden', which !== 'landing');
+  document.getElementById('loginView').classList.toggle('hidden', which !== 'login');
+  document.getElementById('signupView').classList.toggle('hidden', which !== 'signup');
+  document.getElementById('mainApp').classList.add('hidden');
+}
+
+function isAdmin() { return currentUser && currentUser.role === 'admin'; }
+
+function canAccessSection(section) {
+  if (isAdmin()) return true;
+  return section === 'storage' || section === 'sales';
+}
+function canAccessStorageTab(tab) {
+  if (isAdmin()) return true;
+  return tab === 'cartons';
+}
+
+function applyRolePermissions() {
+  const admin = isAdmin();
+  document.getElementById('tabWorkspaceBtn').classList.toggle('hidden', !admin);
+  document.getElementById('tabAdminBtn').classList.toggle('hidden', !admin);
+  document.getElementById('tabStickersBtn').classList.toggle('hidden', !admin);
+}
+
+async function showMainApp(user) {
+  currentUser = user;
+  document.getElementById('landingView').classList.add('hidden');
+  document.getElementById('loginView').classList.add('hidden');
+  document.getElementById('signupView').classList.add('hidden');
+  document.getElementById('mainApp').classList.remove('hidden');
+  document.getElementById('userGreeting').textContent = user.name + (user.role === 'admin' ? ' (admin)' : '');
+  applyRolePermissions();
+
+  await loadStorage();
+  await loadHistory();
+  await loadSales();
+  switchSection(isAdmin() ? 'workspace' : 'sales');
+}
+
+document.getElementById('goLoginBtn').addEventListener('click', () => showAuthScreen('login'));
+document.getElementById('goSignupBtn').addEventListener('click', () => showAuthScreen('signup'));
+document.getElementById('toSignupLink').addEventListener('click', (e) => { e.preventDefault(); showAuthScreen('signup'); });
+document.getElementById('toLoginLink').addEventListener('click', (e) => { e.preventDefault(); showAuthScreen('login'); });
+document.getElementById('loginBackLink').addEventListener('click', (e) => { e.preventDefault(); showAuthScreen('landing'); });
+document.getElementById('signupBackLink').addEventListener('click', (e) => { e.preventDefault(); showAuthScreen('landing'); });
+
+document.getElementById('loginSubmitBtn').addEventListener('click', async () => {
+  const email = document.getElementById('loginEmail').value.trim().replace(/\s|-/g, '');
+  const password = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  const user = allUsers.find(u => u.email === email && u.password === password);
+  if (!user) {
+    errEl.textContent = 'Incorrect phone number or password.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  errEl.classList.add('hidden');
+  await idbSet(SESSION_KEY, user.id);
+  document.getElementById('loginEmail').value = '';
+  document.getElementById('loginPassword').value = '';
+  await showMainApp(user);
+});
+
+document.getElementById('signupSubmitBtn').addEventListener('click', async () => {
+  const name = document.getElementById('signupName').value.trim();
+  const email = document.getElementById('signupEmail').value.trim().replace(/\s|-/g, '');
+  const password = document.getElementById('signupPassword').value;
+  const errEl = document.getElementById('signupError');
+
+  if (!name || !email || !password) {
+    errEl.textContent = 'Please fill in all fields.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  const egyptPhone = /^(01[0-2,5]\d{8}|\+201[0-2,5]\d{8})$/;
+  if (!egyptPhone.test(email)) {
+    errEl.textContent = 'Enter a valid Egyptian number, e.g. 01012345678.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  if (allUsers.some(u => u.email === email)) {
+    errEl.textContent = 'An account with this number already exists.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  errEl.classList.add('hidden');
+  const newUser = { id: uid(), name, email, password, role: 'promoter' };
+  allUsers.push(newUser);
+  await saveUsers();
+  await idbSet(SESSION_KEY, newUser.id);
+  document.getElementById('signupName').value = '';
+  document.getElementById('signupEmail').value = '';
+  document.getElementById('signupPassword').value = '';
+  await showMainApp(newUser);
+});
+
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  await idbDelete(SESSION_KEY);
+  currentUser = null;
+  showAuthScreen('landing');
+});
 
 let tree = null;
 let path = ['root']; // array of node ids from root to current
@@ -1276,9 +1711,10 @@ document.getElementById('resetBtn').addEventListener('click', async () => {
 
 /* ---------- Storage (Stickers & Cartons) ---------- */
 
-const STICKERS_KEY = 'storage-stickers';
-const CARTONS_KEY = 'storage-cartons';
-const HISTORY_KEY = 'storage-history';
+function STICKERS_KEY() { return 'storage-stickers-' + (currentUser ? currentUser.id : 'guest'); }
+function CARTONS_KEY() { return 'storage-cartons-' + (currentUser ? currentUser.id : 'guest'); }
+function HISTORY_KEY() { return 'storage-history-' + (currentUser ? currentUser.id : 'guest'); }
+function SALES_KEY(userId) { return 'sales-' + (userId || (currentUser ? currentUser.id : 'guest')); }
 
 let activeSection = 'workspace';
 let activeStorageTab = 'stickers';
@@ -1294,7 +1730,7 @@ let actionMenuItemType = null;
 
 async function loadHistory() {
   try {
-    const h = await idbGet(HISTORY_KEY);
+    const h = await idbGet(HISTORY_KEY());
     historyLog = h ? JSON.parse(h) : [];
   } catch (e) { historyLog = []; }
 }
@@ -1302,7 +1738,7 @@ async function loadHistory() {
 async function saveHistory() {
   try {
     if (historyLog.length > 500) historyLog = historyLog.slice(historyLog.length - 500);
-    await idbSet(HISTORY_KEY, JSON.stringify(historyLog));
+    await idbSet(HISTORY_KEY(), JSON.stringify(historyLog));
   } catch (e) { /* non-critical, don't block the user's action */ }
 }
 
@@ -1327,22 +1763,22 @@ function formatHistoryTime(ts) {
 
 async function loadStorage() {
   try {
-    const s = await idbGet(STICKERS_KEY);
+    const s = await idbGet(STICKERS_KEY());
     stickers = s ? JSON.parse(s) : [];
   } catch (e) { stickers = []; }
   try {
-    const c = await idbGet(CARTONS_KEY);
+    const c = await idbGet(CARTONS_KEY());
     cartons = c ? JSON.parse(c) : [];
   } catch (e) { cartons = []; }
 }
 
 async function saveStickers() {
-  try { await idbSet(STICKERS_KEY, JSON.stringify(stickers)); }
+  try { await idbSet(STICKERS_KEY(), JSON.stringify(stickers)); }
   catch (e) { alert('Could not save. Please try again.'); }
 }
 
 async function saveCartons() {
-  try { await idbSet(CARTONS_KEY, JSON.stringify(cartons)); }
+  try { await idbSet(CARTONS_KEY(), JSON.stringify(cartons)); }
   catch (e) { alert('Could not save. Please try again.'); }
 }
 
@@ -1455,15 +1891,23 @@ document.getElementById('historyOverlay').addEventListener('click', (e) => {
 document.getElementById('storageHistoryBtn').addEventListener('click', () => openHistoryOverlay(null, null));
 
 function switchSection(section) {
+  if (!canAccessSection(section)) section = 'sales';
   activeSection = section;
   document.getElementById('workspaceSection').classList.toggle('hidden', section !== 'workspace');
   document.getElementById('storageSection').classList.toggle('hidden', section !== 'storage');
+  document.getElementById('salesSection').classList.toggle('hidden', section !== 'sales');
+  document.getElementById('adminSection').classList.toggle('hidden', section !== 'admin');
   document.getElementById('tabWorkspaceBtn').classList.toggle('active', section === 'workspace');
   document.getElementById('tabStorageBtn').classList.toggle('active', section === 'storage');
-  if (section === 'storage') renderStorageGrid();
+  document.getElementById('tabSalesBtn').classList.toggle('active', section === 'sales');
+  document.getElementById('tabAdminBtn').classList.toggle('active', section === 'admin');
+  if (section === 'storage') { if (!canAccessStorageTab(activeStorageTab)) activeStorageTab = 'cartons'; renderStorageGrid(); }
+  if (section === 'sales') renderSalesGrid();
+  if (section === 'admin') renderAdminView();
 }
 
 function switchStorageTab(tab) {
+  if (!canAccessStorageTab(tab)) tab = 'cartons';
   activeStorageTab = tab;
   document.getElementById('tabStickersBtn').classList.toggle('active', tab === 'stickers');
   document.getElementById('tabCartonsBtn').classList.toggle('active', tab === 'cartons');
@@ -1472,6 +1916,8 @@ function switchStorageTab(tab) {
 
 document.getElementById('tabWorkspaceBtn').addEventListener('click', () => switchSection('workspace'));
 document.getElementById('tabStorageBtn').addEventListener('click', () => switchSection('storage'));
+document.getElementById('tabSalesBtn').addEventListener('click', () => switchSection('sales'));
+document.getElementById('tabAdminBtn').addEventListener('click', () => switchSection('admin'));
 document.getElementById('tabStickersBtn').addEventListener('click', () => switchStorageTab('stickers'));
 document.getElementById('tabCartonsBtn').addEventListener('click', () => switchStorageTab('cartons'));
 
@@ -1516,15 +1962,25 @@ function renderStorageGrid() {
     } else {
       const name = document.createElement('div');
       name.className = 'name';
-      name.textContent = item.name;
+      name.textContent = item.name + (item.clientName ? ' · ' + item.clientName : '');
       card.appendChild(name);
 
-      const total = (item.unitsPerCarton || 0) * (item.cartonCount || 0) + (item.extraPieces || 0);
+      const stock = computeCartonStock(item, sales);
+      const extraText = item.extraPieces ? ` + ${item.extraPieces} loose` : '';
       const meta = document.createElement('div');
       meta.className = 'meta';
-      const extraText = item.extraPieces ? ` + ${item.extraPieces} loose` : '';
-      meta.textContent = `${item.unitsPerCarton || 0}/carton · ${item.cartonCount || 0} cartons${extraText} · ${total} total`;
+      meta.textContent = `${item.unitsPerCarton || 0}/carton · ${item.cartonCount || 0} cartons${extraText} · ${stock.assigned} assigned · ${stock.sold} sold · ${stock.remaining} left`;
       card.appendChild(meta);
+
+      if (stock.shortage) {
+        card.style.setProperty('--depth-color', 'var(--accent-2)');
+        const warn = document.createElement('div');
+        warn.className = 'meta';
+        warn.style.color = 'var(--accent-2)';
+        warn.style.fontWeight = '600';
+        warn.textContent = `⚠ Low stock — at or below alert level of ${stock.threshold}`;
+        card.appendChild(warn);
+      }
     }
 
     const editBtn = document.createElement('div');
@@ -1570,6 +2026,8 @@ function openStorageSheet(id, type) {
   const unitsInput = document.getElementById('unitsPerCartonInput');
   const cartonCountInput = document.getElementById('cartonCountInput');
   const extraPiecesInput = document.getElementById('extraPiecesInput');
+  const clientInput = document.getElementById('cartonClientInput');
+  const thresholdInput = document.getElementById('cartonThresholdInput');
   const preview = document.getElementById('storageImagePreview');
   const removeBtn = document.getElementById('storageRemoveImgBtn');
   const deleteBtn = document.getElementById('storageDeleteBtn');
@@ -1603,6 +2061,8 @@ function openStorageSheet(id, type) {
       unitsInput.value = item.unitsPerCarton !== undefined ? item.unitsPerCarton : '';
       cartonCountInput.value = item.cartonCount !== undefined ? item.cartonCount : '';
       extraPiecesInput.value = item.extraPieces !== undefined ? item.extraPieces : '';
+      clientInput.value = item.clientName || '';
+      thresholdInput.value = (item.threshold !== undefined && item.threshold !== null) ? item.threshold : '';
       updateCartonTotalPreview();
     }
   } else {
@@ -1612,8 +2072,17 @@ function openStorageSheet(id, type) {
     unitsInput.value = '';
     cartonCountInput.value = '';
     extraPiecesInput.value = '';
+    clientInput.value = '';
+    thresholdInput.value = '';
     updateCartonTotalPreview();
     deleteBtn.classList.add('hidden');
+  }
+
+  if (type === 'carton') {
+    const dl = document.getElementById('clientNameList');
+    dl.innerHTML = '';
+    const names = [...new Set(cartons.map(c => c.clientName).filter(Boolean))];
+    names.forEach(n => { const opt = document.createElement('option'); opt.value = n; dl.appendChild(opt); });
   }
 
   overlay.classList.remove('hidden');
@@ -1720,28 +2189,35 @@ document.getElementById('storageSaveBtn').addEventListener('click', async () => 
     const unitsRaw = document.getElementById('unitsPerCartonInput').value;
     const cartonRaw = document.getElementById('cartonCountInput').value;
     const extraRaw = document.getElementById('extraPiecesInput').value;
+    const clientName = document.getElementById('cartonClientInput').value.trim();
+    const thresholdRaw = document.getElementById('cartonThresholdInput').value;
     const unitsPerCarton = unitsRaw === '' ? 0 : Number(unitsRaw);
     const cartonCount = cartonRaw === '' ? 0 : Number(cartonRaw);
     const extraPieces = extraRaw === '' ? 0 : Number(extraRaw);
+    const threshold = thresholdRaw === '' ? null : Number(thresholdRaw);
 
     if (editingStorageId) {
       const item = cartons.find(x => x.id === editingStorageId);
-      const oldName = item.name, oldUnits = item.unitsPerCarton, oldCount = item.cartonCount, oldExtra = item.extraPieces || 0;
+      const oldName = item.name, oldUnits = item.unitsPerCarton, oldCount = item.cartonCount, oldExtra = item.extraPieces || 0, oldClient = item.clientName || '', oldThreshold = item.threshold;
       item.name = name;
       item.unitsPerCarton = unitsPerCarton;
       item.cartonCount = cartonCount;
       item.extraPieces = extraPieces;
+      item.clientName = clientName;
+      item.threshold = threshold;
       const changeParts = [];
       if (oldName !== name) changeParts.push(`Name: "${oldName}" → "${name}"`);
       if (oldUnits !== unitsPerCarton) changeParts.push(`Units/carton: ${oldUnits} → ${unitsPerCarton}`);
       if (oldCount !== cartonCount) changeParts.push(`Cartons: ${oldCount} → ${cartonCount}`);
       if (oldExtra !== extraPieces) changeParts.push(`Loose pieces: ${oldExtra} → ${extraPieces}`);
+      if (oldClient !== clientName) changeParts.push(`Client: "${oldClient || '—'}" → "${clientName || '—'}"`);
+      if (oldThreshold !== threshold) changeParts.push(`Alert at: ${oldThreshold ?? '—'} → ${threshold ?? '—'}`);
       await logHistory('carton', editingStorageId, name, 'edited', changeParts.length ? changeParts.join(', ') : 'No changes');
     } else {
-      const newItem = { id: uid(), name, unitsPerCarton, cartonCount, extraPieces };
+      const newItem = { id: uid(), name, unitsPerCarton, cartonCount, extraPieces, clientName, threshold };
       cartons.push(newItem);
       const total = unitsPerCarton * cartonCount + extraPieces;
-      await logHistory('carton', newItem.id, name, 'added', `${cartonCount} cartons × ${unitsPerCarton}/carton` + (extraPieces ? ` + ${extraPieces} loose` : '') + ` = ${total} total`);
+      await logHistory('carton', newItem.id, name, 'added', `${cartonCount} cartons × ${unitsPerCarton}/carton` + (extraPieces ? ` + ${extraPieces} loose` : '') + ` = ${total} total` + (clientName ? ` for ${clientName}` : ''));
     }
     await saveCartons();
   }
@@ -1782,12 +2258,383 @@ document.getElementById('storageDeleteBtn').addEventListener('click', async () =
 
 /* ---------- End Storage ---------- */
 
+/* ---------- Sales ---------- */
+
+let sales = [];
+let editingSaleId = null;
+
+async function loadSales() {
+  try {
+    const s = await idbGet(SALES_KEY());
+    sales = s ? JSON.parse(s) : [];
+  } catch (e) { sales = []; }
+}
+
+async function saveSales() {
+  try { await idbSet(SALES_KEY(), JSON.stringify(sales)); }
+  catch (e) { alert('Could not save. Please try again.'); }
+}
+
+function renderSalesGrid() {
+  const grid = document.getElementById('salesGrid');
+  grid.innerHTML = '';
+  let total = 0;
+
+  if (!sales.length) {
+    const note = document.createElement('div');
+    note.className = 'empty-note';
+    note.textContent = 'No sales logged yet. Add the first one below.';
+    grid.appendChild(note);
+  }
+
+  const sorted = sales.slice().sort((a, b) => b.ts - a.ts);
+  sorted.forEach(sale => {
+    total += sale.qty || 0;
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.setProperty('--depth-color', 'var(--accent-2)');
+    card.style.cursor = 'default';
+
+    const name = document.createElement('div');
+    name.className = 'name';
+    name.textContent = sale.product;
+    card.appendChild(name);
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.textContent = `Qty: ${sale.qty}` + (sale.note ? ' · ' + sale.note : '') + ' · ' + formatHistoryTime(sale.ts);
+    card.appendChild(meta);
+
+    const editBtn = document.createElement('div');
+    editBtn.className = 'edit-btn';
+    editBtn.textContent = '⋯';
+    editBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openSalesSheet(sale.id);
+    });
+    card.appendChild(editBtn);
+
+    grid.appendChild(card);
+  });
+
+  const addCard = document.createElement('div');
+  addCard.className = 'card add-card';
+  addCard.style.setProperty('--depth-color', 'var(--accent-2)');
+  addCard.innerHTML = '<div class="plus">+</div><div class="label">Log a sale</div>';
+  addCard.addEventListener('click', () => openSalesSheet(null));
+  grid.appendChild(addCard);
+
+  document.getElementById('salesTotalPreviewCard').textContent = 'Total sold: ' + total + ' units';
+}
+
+function computeCartonStock(carton, salesList) {
+  const assigned = (carton.unitsPerCarton || 0) * (carton.cartonCount || 0) + (carton.extraPieces || 0);
+  const sold = (salesList || []).filter(s => s.cartonId === carton.id).reduce((sum, s) => sum + (s.qty || 0), 0);
+  const remaining = assigned - sold;
+  const hasThreshold = carton.threshold !== null && carton.threshold !== undefined && carton.threshold !== '';
+  const shortage = hasThreshold && remaining <= carton.threshold;
+  return { assigned, sold, remaining, shortage, threshold: hasThreshold ? carton.threshold : null };
+}
+
+function populateSalesCartonSelect(selectedCartonId) {
+  const sel = document.getElementById('salesCartonSelect');
+  sel.innerHTML = '<option value="">— type manually —</option>';
+  cartons.forEach(c => {
+    const stock = computeCartonStock(c, sales);
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.name + (c.clientName ? ' (' + c.clientName + ')' : '') + ' — ' + stock.remaining + ' left';
+    if (c.id === selectedCartonId) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+document.getElementById('salesCartonSelect').addEventListener('change', (e) => {
+  const carton = cartons.find(c => c.id === e.target.value);
+  if (carton) {
+    document.getElementById('salesProductInput').value = carton.name;
+    document.getElementById('salesClientInput').value = carton.clientName || '';
+  }
+});
+
+function openSalesSheet(saleId) {
+  editingSaleId = saleId;
+  const title = document.getElementById('salesSheetTitle');
+  const productInput = document.getElementById('salesProductInput');
+  const clientInput = document.getElementById('salesClientInput');
+  const qtyInput = document.getElementById('salesQtyInput');
+  const noteInput = document.getElementById('salesNoteInput');
+  const deleteBtn = document.getElementById('salesDeleteBtn');
+
+  if (saleId) {
+    const sale = sales.find(s => s.id === saleId);
+    title.textContent = 'Edit sale';
+    productInput.value = sale.product;
+    clientInput.value = sale.clientName || '';
+    qtyInput.value = sale.qty;
+    noteInput.value = sale.note || '';
+    deleteBtn.classList.remove('hidden');
+    populateSalesCartonSelect(sale.cartonId || '');
+  } else {
+    title.textContent = 'New sale';
+    productInput.value = '';
+    clientInput.value = '';
+    qtyInput.value = '';
+    noteInput.value = '';
+    deleteBtn.classList.add('hidden');
+    populateSalesCartonSelect('');
+  }
+
+  document.getElementById('salesOverlay').classList.remove('hidden');
+  setTimeout(() => productInput.focus(), 50);
+}
+
+function closeSalesSheet() {
+  document.getElementById('salesOverlay').classList.add('hidden');
+  editingSaleId = null;
+}
+
+document.getElementById('salesCancelBtn').addEventListener('click', closeSalesSheet);
+document.getElementById('salesOverlay').addEventListener('click', (e) => {
+  if (e.target.id === 'salesOverlay') closeSalesSheet();
+});
+
+document.getElementById('salesSaveBtn').addEventListener('click', async () => {
+  const product = document.getElementById('salesProductInput').value.trim();
+  const clientName = document.getElementById('salesClientInput').value.trim();
+  const qtyRaw = document.getElementById('salesQtyInput').value;
+  const note = document.getElementById('salesNoteInput').value.trim();
+  const cartonId = document.getElementById('salesCartonSelect').value || null;
+  if (!product) { alert('Enter a product name first.'); return; }
+  const qty = qtyRaw === '' ? 0 : Number(qtyRaw);
+
+  if (editingSaleId) {
+    const sale = sales.find(s => s.id === editingSaleId);
+    sale.product = product;
+    sale.clientName = clientName;
+    sale.qty = qty;
+    sale.note = note;
+    sale.cartonId = cartonId;
+  } else {
+    sales.push({ id: uid(), product, clientName, qty, note, cartonId, ts: Date.now() });
+  }
+  await saveSales();
+  await logHistory('carton', cartonId || 'unlinked', product, 'edited', `Sale: -${qty} units` + (clientName ? ` (${clientName})` : ''));
+  closeSalesSheet();
+  renderSalesGrid();
+});
+
+document.getElementById('salesDeleteBtn').addEventListener('click', async () => {
+  const sale = sales.find(s => s.id === editingSaleId);
+  const ok = await customConfirm(`Delete this sale of "${sale.product}"?`, 'Delete');
+  if (!ok) return;
+  sales = sales.filter(s => s.id !== editingSaleId);
+  await saveSales();
+  closeSalesSheet();
+  renderSalesGrid();
+});
+
+/* ---------- Admin ---------- */
+
+async function renderAdminView() {
+  const promoters = allUsers.filter(u => u.role !== 'admin');
+
+  // Gather each promoter's cartons, sales, and history in one pass
+  const perPromoter = [];
+  for (const u of promoters) {
+    let userCartons = [], userSales = [], userHistory = [];
+    try { const raw = await idbGet('storage-cartons-' + u.id); userCartons = raw ? JSON.parse(raw) : []; } catch (e) {}
+    try { const raw = await idbGet(SALES_KEY(u.id)); userSales = raw ? JSON.parse(raw) : []; } catch (e) {}
+    try { const raw = await idbGet('storage-history-' + u.id); userHistory = raw ? JSON.parse(raw) : []; } catch (e) {}
+    perPromoter.push({ user: u, cartons: userCartons, sales: userSales, history: userHistory });
+  }
+
+  // --- Alerts ---
+  const alertsEl = document.getElementById('adminAlertsList');
+  alertsEl.innerHTML = '';
+  const alerts = [];
+  perPromoter.forEach(p => {
+    p.cartons.forEach(c => {
+      const stock = computeCartonStock(c, p.sales);
+      if (stock.shortage) alerts.push({ user: p.user, carton: c, stock });
+    });
+  });
+  if (!alerts.length) {
+    alertsEl.innerHTML = '<div class="empty-note">No low-stock alerts right now.</div>';
+  } else {
+    alerts.forEach(a => {
+      const row = document.createElement('div');
+      row.className = 'alert-row';
+      row.innerHTML = `<strong>${a.carton.name}</strong>${a.carton.clientName ? ' — ' + a.carton.clientName : ''} — ${a.user.name}<br><span class="alert-sub">${a.stock.remaining} left (alert at ${a.stock.threshold}) · assigned ${a.stock.assigned}, sold ${a.stock.sold}</span>`;
+      alertsEl.appendChild(row);
+    });
+  }
+
+  // --- Stock by promoter ---
+  const stockEl = document.getElementById('adminStockList');
+  stockEl.innerHTML = '';
+  const withStock = perPromoter.filter(p => p.cartons.length);
+  if (!withStock.length) {
+    stockEl.innerHTML = '<div class="empty-note">No stock assigned yet.</div>';
+  } else {
+    withStock.forEach(p => {
+      const groupEl = document.createElement('div');
+      groupEl.className = 'promoter-group';
+      const titleEl = document.createElement('div');
+      titleEl.className = 'promoter-group-title';
+      titleEl.innerHTML = `<span>${p.user.name}</span>`;
+      groupEl.appendChild(titleEl);
+      p.cartons.forEach(c => {
+        const stock = computeCartonStock(c, p.sales);
+        const row = document.createElement('div');
+        row.className = 'sale-row';
+        row.innerHTML = `<span>${c.name}${c.clientName ? ' — ' + c.clientName : ''}</span><span class="sale-meta">${stock.assigned} assigned · ${stock.sold} sold · ${stock.remaining} left</span>`;
+        if (stock.shortage) row.style.color = 'var(--accent-2)';
+        groupEl.appendChild(row);
+      });
+      stockEl.appendChild(groupEl);
+    });
+  }
+
+  // --- Recent activity ---
+  const activityEl = document.getElementById('adminActivityList');
+  activityEl.innerHTML = '';
+  let allActivity = [];
+  perPromoter.forEach(p => {
+    p.history.forEach(h => allActivity.push({ ...h, promoterName: p.user.name }));
+  });
+  allActivity.sort((a, b) => b.ts - a.ts);
+  allActivity = allActivity.slice(0, 15);
+  if (!allActivity.length) {
+    activityEl.innerHTML = '<div class="empty-note">No promoter activity yet.</div>';
+  } else {
+    allActivity.forEach(entry => {
+      const row = document.createElement('div');
+      row.className = 'history-entry';
+      row.innerHTML = `<div class="history-top"><span class="history-action ${entry.action}">${entry.action.charAt(0).toUpperCase() + entry.action.slice(1)}</span><span class="history-time">${formatHistoryTime(entry.ts)}</span></div><div class="history-name">${entry.promoterName} — ${entry.itemName}</div>${entry.details ? `<div class="history-details">${entry.details}</div>` : ''}`;
+      activityEl.appendChild(row);
+    });
+  }
+
+  // --- Sales by promoter ---
+  const container = document.getElementById('adminSalesList');
+  let grandTotal = 0;
+  const groups = perPromoter.filter(p => p.sales.length).map(p => {
+    const total = p.sales.reduce((sum, s) => sum + (s.qty || 0), 0);
+    grandTotal += total;
+    return { user: p.user, sales: p.sales.slice().sort((a, b) => b.ts - a.ts), total };
+  });
+
+  container.innerHTML = '';
+  if (!groups.length) {
+    container.innerHTML = '<div class="empty-note">No promoter sales logged on this device yet.</div>';
+  } else {
+    groups.forEach(g => {
+      const groupEl = document.createElement('div');
+      groupEl.className = 'promoter-group';
+
+      const titleEl = document.createElement('div');
+      titleEl.className = 'promoter-group-title';
+      titleEl.innerHTML = `<span>${g.user.name}</span><span class="sub">${g.total} units total</span>`;
+      groupEl.appendChild(titleEl);
+
+      g.sales.forEach(sale => {
+        const row = document.createElement('div');
+        row.className = 'sale-row';
+        row.innerHTML = `<span>${sale.product}${sale.clientName ? ' — ' + sale.clientName : ''}${sale.note ? ' (' + sale.note + ')' : ''}</span><span class="sale-meta">Qty ${sale.qty} · ${formatHistoryTime(sale.ts)}</span>`;
+        groupEl.appendChild(row);
+      });
+
+      container.appendChild(groupEl);
+    });
+  }
+
+  document.getElementById('adminTotalPreviewCard').textContent = 'Total sold (all promoters): ' + grandTotal + ' units';
+}
+
+function populateAssignPromoterSelect() {
+  const sel = document.getElementById('assignPromoterSelect');
+  sel.innerHTML = '';
+  allUsers.filter(u => u.role !== 'admin').forEach(u => {
+    const opt = document.createElement('option');
+    opt.value = u.id;
+    opt.textContent = u.name;
+    sel.appendChild(opt);
+  });
+}
+
+document.getElementById('assignStockBtn').addEventListener('click', () => {
+  if (!allUsers.some(u => u.role !== 'admin')) {
+    alert('No promoter accounts yet — have a promoter sign up first.');
+    return;
+  }
+  populateAssignPromoterSelect();
+  document.getElementById('assignNameInput').value = '';
+  document.getElementById('assignClientInput').value = '';
+  document.getElementById('assignUnitsInput').value = '';
+  document.getElementById('assignCartonCountInput').value = '';
+  document.getElementById('assignExtraInput').value = '';
+  document.getElementById('assignThresholdInput').value = '';
+  document.getElementById('assignStockOverlay').classList.remove('hidden');
+});
+
+document.getElementById('assignCancelBtn').addEventListener('click', () => {
+  document.getElementById('assignStockOverlay').classList.add('hidden');
+});
+document.getElementById('assignStockOverlay').addEventListener('click', (e) => {
+  if (e.target.id === 'assignStockOverlay') document.getElementById('assignStockOverlay').classList.add('hidden');
+});
+
+document.getElementById('assignSaveBtn').addEventListener('click', async () => {
+  const promoterId = document.getElementById('assignPromoterSelect').value;
+  const name = document.getElementById('assignNameInput').value.trim();
+  if (!promoterId || !name) { alert('Pick a promoter and enter a product name.'); return; }
+  const clientName = document.getElementById('assignClientInput').value.trim();
+  const unitsPerCarton = Number(document.getElementById('assignUnitsInput').value) || 0;
+  const cartonCount = Number(document.getElementById('assignCartonCountInput').value) || 0;
+  const extraPieces = Number(document.getElementById('assignExtraInput').value) || 0;
+  const thresholdRaw = document.getElementById('assignThresholdInput').value;
+  const threshold = thresholdRaw === '' ? null : Number(thresholdRaw);
+
+  const key = 'storage-cartons-' + promoterId;
+  let promoterCartons = [];
+  try { const raw = await idbGet(key); promoterCartons = raw ? JSON.parse(raw) : []; } catch (e) {}
+  const newItem = { id: uid(), name, unitsPerCarton, cartonCount, extraPieces, clientName, threshold };
+  promoterCartons.push(newItem);
+  await idbSet(key, JSON.stringify(promoterCartons));
+
+  const historyKey = 'storage-history-' + promoterId;
+  let promoterHistory = [];
+  try { const raw = await idbGet(historyKey); promoterHistory = raw ? JSON.parse(raw) : []; } catch (e) {}
+  const total = unitsPerCarton * cartonCount + extraPieces;
+  promoterHistory.push({
+    id: uid(), itemType: 'carton', itemId: newItem.id, itemName: name, action: 'added',
+    details: `Assigned by admin: ${cartonCount} cartons × ${unitsPerCarton}/carton${extraPieces ? ` + ${extraPieces} loose` : ''} = ${total} total` + (clientName ? ` for ${clientName}` : ''),
+    ts: Date.now()
+  });
+  await idbSet(historyKey, JSON.stringify(promoterHistory));
+
+  document.getElementById('assignStockOverlay').classList.add('hidden');
+  renderAdminView();
+});
+
+/* ---------- End Sales & Admin ---------- */
+
 async function init() {
   await loadTree();
-  await loadStorage();
-  await loadHistory();
+  await loadUsers();
   document.getElementById('loadingState').classList.add('hidden');
   render();
+
+  let sessionUserId = null;
+  try { sessionUserId = await idbGet(SESSION_KEY); } catch (e) {}
+  const sessionUser = sessionUserId ? allUsers.find(u => u.id === sessionUserId) : null;
+
+  if (sessionUser) {
+    await showMainApp(sessionUser);
+  } else {
+    showAuthScreen('landing');
+  }
 }
 
 init();
