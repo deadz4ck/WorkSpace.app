@@ -821,8 +821,16 @@ body {
         </svg>
       </div>
     </div>
-    <div class="carton-total" id="salesTotalPreviewCard">Total sold: 0 units</div>
-    <div class="grid" id="salesGrid"></div>
+
+    <div id="promoterSalesView">
+      <div class="carton-total" id="salesTotalPreviewCard">Total sold: 0 units</div>
+      <div class="grid" id="salesGrid"></div>
+    </div>
+
+    <div id="adminSalesBrowser" class="hidden">
+      <div class="crumbs" id="adminSalesCrumbs"></div>
+      <div id="adminSalesContent"></div>
+    </div>
   </div>
 
   <div id="adminSection" class="hidden">
@@ -1902,7 +1910,12 @@ function switchSection(section) {
   document.getElementById('tabSalesBtn').classList.toggle('active', section === 'sales');
   document.getElementById('tabAdminBtn').classList.toggle('active', section === 'admin');
   if (section === 'storage') { if (!canAccessStorageTab(activeStorageTab)) activeStorageTab = 'cartons'; renderStorageGrid(); }
-  if (section === 'sales') renderSalesGrid();
+  if (section === 'sales') {
+    document.getElementById('promoterSalesView').classList.toggle('hidden', isAdmin());
+    document.getElementById('adminSalesBrowser').classList.toggle('hidden', !isAdmin());
+    if (isAdmin()) { adminSalesState = { level: 'promoters', promoterId: null, mode: null, range: null }; renderAdminSalesBrowser(); }
+    else renderSalesGrid();
+  }
   if (section === 'admin') renderAdminView();
 }
 
@@ -2617,6 +2630,177 @@ document.getElementById('assignSaveBtn').addEventListener('click', async () => {
   document.getElementById('assignStockOverlay').classList.add('hidden');
   renderAdminView();
 });
+
+/* ---------- Admin Sales Browser (promoter drill-down) ---------- */
+
+let adminSalesState = { level: 'promoters', promoterId: null, mode: null, range: null };
+
+const RANGE_OPTIONS = [
+  { key: 'month', label: 'This month', days: 30 },
+  { key: '3months', label: 'Last 3 months', days: 90 },
+  { key: '6months', label: 'Last 6 months', days: 180 },
+  { key: 'year', label: 'This year', days: 365 }
+];
+
+function makeCrumb(text, onClick, isCurrent) {
+  const c = document.createElement('div');
+  c.className = 'crumb' + (isCurrent ? ' current' : '');
+  c.textContent = text;
+  c.addEventListener('click', onClick);
+  return c;
+}
+
+function makeSimpleCard(title, subtitle, color, onClick) {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.style.setProperty('--depth-color', color);
+  const name = document.createElement('div');
+  name.className = 'name';
+  name.textContent = title;
+  card.appendChild(name);
+  if (subtitle) {
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.textContent = subtitle;
+    card.appendChild(meta);
+  }
+  card.addEventListener('click', onClick);
+  return card;
+}
+
+function renderAdminSalesCrumbs() {
+  const el = document.getElementById('adminSalesCrumbs');
+  el.innerHTML = '';
+  el.appendChild(makeCrumb('All Promoters', () => {
+    adminSalesState = { level: 'promoters', promoterId: null, mode: null, range: null };
+    renderAdminSalesBrowser();
+  }, adminSalesState.level === 'promoters'));
+
+  if (adminSalesState.promoterId) {
+    const promoter = allUsers.find(u => u.id === adminSalesState.promoterId);
+    el.appendChild(makeCrumb(promoter ? promoter.name : '…', () => {
+      adminSalesState.level = 'menu'; adminSalesState.mode = null; adminSalesState.range = null;
+      renderAdminSalesBrowser();
+    }, adminSalesState.level === 'menu'));
+  }
+  if (adminSalesState.mode) {
+    el.appendChild(makeCrumb(adminSalesState.mode === 'sales' ? 'Sales' : 'Storage', () => {
+      adminSalesState.level = 'range'; adminSalesState.range = null;
+      renderAdminSalesBrowser();
+    }, adminSalesState.level === 'range'));
+  }
+  if (adminSalesState.range) {
+    const rangeObj = RANGE_OPTIONS.find(r => r.key === adminSalesState.range);
+    el.appendChild(makeCrumb(rangeObj ? rangeObj.label : '', () => {}, true));
+  }
+}
+
+function renderAdminSalesBrowser() {
+  renderAdminSalesCrumbs();
+  const content = document.getElementById('adminSalesContent');
+  content.innerHTML = '';
+
+  if (adminSalesState.level === 'promoters') {
+    const promoters = allUsers.filter(u => u.role !== 'admin');
+    if (!promoters.length) { content.innerHTML = '<div class="empty-note">No promoter accounts yet.</div>'; return; }
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+    promoters.forEach(p => {
+      grid.appendChild(makeSimpleCard(p.name, 'Tap to view', 'var(--accent-1)', () => {
+        adminSalesState.level = 'menu'; adminSalesState.promoterId = p.id;
+        renderAdminSalesBrowser();
+      }));
+    });
+    content.appendChild(grid);
+  } else if (adminSalesState.level === 'menu') {
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+    grid.appendChild(makeSimpleCard('Sales', 'View sales history', 'var(--accent-2)', () => {
+      adminSalesState.level = 'range'; adminSalesState.mode = 'sales';
+      renderAdminSalesBrowser();
+    }));
+    grid.appendChild(makeSimpleCard('Storage', 'View cartons & stock', 'var(--accent-3)', () => {
+      adminSalesState.level = 'range'; adminSalesState.mode = 'storage';
+      renderAdminSalesBrowser();
+    }));
+    content.appendChild(grid);
+  } else if (adminSalesState.level === 'range') {
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+    RANGE_OPTIONS.forEach(r => {
+      grid.appendChild(makeSimpleCard(r.label, '', 'var(--accent-4)', () => {
+        adminSalesState.level = 'detail'; adminSalesState.range = r.key;
+        renderAdminSalesBrowser();
+      }));
+    });
+    content.appendChild(grid);
+  } else if (adminSalesState.level === 'detail') {
+    renderAdminSalesDetail(content);
+  }
+}
+
+async function renderAdminSalesDetail(content) {
+  content.innerHTML = '<div class="empty-note">Loading…</div>';
+  const promoter = allUsers.find(u => u.id === adminSalesState.promoterId);
+  const rangeObj = RANGE_OPTIONS.find(r => r.key === adminSalesState.range);
+  const cutoff = Date.now() - rangeObj.days * 24 * 60 * 60 * 1000;
+
+  if (adminSalesState.mode === 'sales') {
+    let userSales = [];
+    try { const raw = await idbGet(SALES_KEY(promoter.id)); userSales = raw ? JSON.parse(raw) : []; } catch (e) {}
+    const filtered = userSales.filter(s => s.ts >= cutoff).sort((a, b) => b.ts - a.ts);
+    const total = filtered.reduce((sum, s) => sum + (s.qty || 0), 0);
+
+    content.innerHTML = '';
+    const totalCard = document.createElement('div');
+    totalCard.className = 'carton-total';
+    totalCard.textContent = `${rangeObj.label}: ${total} units sold across ${filtered.length} sale${filtered.length === 1 ? '' : 's'}`;
+    content.appendChild(totalCard);
+
+    if (!filtered.length) {
+      const note = document.createElement('div');
+      note.className = 'empty-note';
+      note.textContent = 'No sales in this period.';
+      content.appendChild(note);
+      return;
+    }
+    filtered.forEach(sale => {
+      const row = document.createElement('div');
+      row.className = 'sale-row';
+      row.innerHTML = `<span>${sale.product}${sale.clientName ? ' — ' + sale.clientName : ''}${sale.note ? ' (' + sale.note + ')' : ''}</span><span class="sale-meta">Qty ${sale.qty} · ${formatHistoryTime(sale.ts)}</span>`;
+      content.appendChild(row);
+    });
+  } else {
+    let userCartons = [], userSales = [];
+    try { const raw = await idbGet('storage-cartons-' + promoter.id); userCartons = raw ? JSON.parse(raw) : []; } catch (e) {}
+    try { const raw = await idbGet(SALES_KEY(promoter.id)); userSales = raw ? JSON.parse(raw) : []; } catch (e) {}
+
+    content.innerHTML = '';
+    if (!userCartons.length) {
+      content.innerHTML = '<div class="empty-note">No storage/cartons for this promoter yet.</div>';
+      return;
+    }
+    const rangeNote = document.createElement('div');
+    rangeNote.className = 'carton-total';
+    rangeNote.textContent = `Showing sold-in-period (${rangeObj.label}) alongside current stock`;
+    content.appendChild(rangeNote);
+
+    userCartons.forEach(c => {
+      const stock = computeCartonStock(c, userSales);
+      const soldInRange = userSales.filter(s => s.cartonId === c.id && s.ts >= cutoff).reduce((sum, s) => sum + (s.qty || 0), 0);
+      const row = document.createElement('div');
+      row.className = 'sale-row';
+      row.style.flexDirection = 'column';
+      row.style.alignItems = 'flex-start';
+      row.style.gap = '2px';
+      if (stock.shortage) row.style.color = 'var(--accent-2)';
+      row.innerHTML = `<strong>${c.name}${c.clientName ? ' — ' + c.clientName : ''}</strong><span class="sale-meta">${rangeObj.label}: ${soldInRange} sold · Now: ${stock.assigned} assigned, ${stock.remaining} left${stock.shortage ? ' ⚠ low stock' : ''}</span>`;
+      content.appendChild(row);
+    });
+  }
+}
+
+/* ---------- End Admin Sales Browser ---------- */
 
 /* ---------- End Sales & Admin ---------- */
 
