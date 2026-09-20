@@ -597,6 +597,52 @@ body {
   color: var(--ink-soft);
 }
 
+.variant-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.variant-pill {
+  padding: 18px 10px;
+  border-radius: 12px;
+  color: #fff;
+  font-family: 'Roboto Slab', serif;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 6px rgba(35,33,29,0.15);
+  transition: transform .13s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow .15s ease, filter .15s ease;
+}
+.variant-pill:hover { filter: brightness(1.08); box-shadow: 0 3px 10px rgba(35,33,29,0.22); }
+.variant-pill:active { transform: scale(0.91); }
+
+.variant-pill .stock-sub {
+  display: block;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.85;
+  margin-top: 3px;
+}
+
+.group-card {
+  position: relative;
+}
+.group-card .swatch-row {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+.group-card .swatch-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.6);
+}
+
 .auth-screen {
   min-height: 100vh;
   display: flex;
@@ -645,7 +691,8 @@ body {
 }
 
 .auth-card input[type="text"],
-.auth-card input[type="password"] {
+.auth-card input[type="password"],
+.auth-card input[type="tel"] {
   width: 100%;
   font-family: 'Inter', sans-serif;
   font-size: 15px;
@@ -790,6 +837,8 @@ body {
     <h2 class="auth-title">Sign Up</h2>
     <span class="field-label">Name</span>
     <input type="text" id="signupName" placeholder="Your name" />
+    <span class="field-label">Store name</span>
+    <input type="text" id="signupStoreName" placeholder="e.g. Zamalek Branch" />
     <span class="field-label">Phone number</span>
     <input type="tel" id="signupEmail" placeholder="01xxxxxxxxx" />
     <span class="field-label">Password</span>
@@ -1025,21 +1074,28 @@ body {
     </div>
 
     <div id="storageCartonFields" class="hidden">
-      <span class="field-label">Client / store (optional)</span>
-      <input type="text" id="cartonClientInput" list="clientNameList" placeholder="e.g. Zamalek Branch" />
-      <datalist id="clientNameList"></datalist>
+      <div id="promoterTotalFields" class="hidden">
+        <span class="field-label">Total pieces you have</span>
+        <input type="number" id="promoterTotalPcsInput" placeholder="e.g. 45" min="0" step="1" />
+      </div>
 
-      <span class="field-label">Units per carton</span>
-      <input type="number" id="unitsPerCartonInput" placeholder="e.g. 12" min="0" step="1" />
+      <div id="adminCartonFields">
+        <span class="field-label">Client / store (optional)</span>
+        <input type="text" id="cartonClientInput" list="clientNameList" placeholder="e.g. Zamalek Branch" />
+        <datalist id="clientNameList"></datalist>
 
-      <span class="field-label">Number of cartons</span>
-      <input type="number" id="cartonCountInput" placeholder="e.g. 30" min="0" step="1" />
+        <span class="field-label">Units per carton</span>
+        <input type="number" id="unitsPerCartonInput" placeholder="e.g. 12" min="0" step="1" />
 
-      <span class="field-label">Extra loose pieces (not in a full carton)</span>
-      <input type="number" id="extraPiecesInput" placeholder="e.g. 7" min="0" step="1" />
+        <span class="field-label">Number of cartons</span>
+        <input type="number" id="cartonCountInput" placeholder="e.g. 30" min="0" step="1" />
 
-      <span class="field-label">Low-stock alert when remaining falls to (optional)</span>
-      <input type="number" id="cartonThresholdInput" placeholder="e.g. 30" min="0" step="1" />
+        <span class="field-label">Extra loose pieces (not in a full carton)</span>
+        <input type="number" id="extraPiecesInput" placeholder="e.g. 7" min="0" step="1" />
+
+        <span class="field-label">Low-stock alert when remaining falls to (optional)</span>
+        <input type="number" id="cartonThresholdInput" placeholder="e.g. 30" min="0" step="1" />
+      </div>
 
       <div class="carton-total" id="cartonTotalPreview">Total: 0 units</div>
     </div>
@@ -1094,6 +1150,15 @@ body {
       </button>
     </div>
     <button class="btn btn-secondary" id="actionMenuCancelBtn" style="width:100%; margin-top:6px;">Cancel</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="variantPickerOverlay">
+  <div class="sheet" id="variantPickerSheet" style="max-width:400px;">
+    <h2 id="variantPickerTitle">Roll On</h2>
+    <p class="admin-note" style="margin-bottom:16px;">Pick which one</p>
+    <div class="variant-grid" id="variantPickerGrid"></div>
+    <button class="btn btn-secondary" id="variantPickerCancelBtn" style="width:100%; margin-top:14px;">Cancel</button>
   </div>
 </div>
 
@@ -1188,7 +1253,9 @@ async function showMainApp(user) {
   document.getElementById('loginView').classList.add('hidden');
   document.getElementById('signupView').classList.add('hidden');
   document.getElementById('mainApp').classList.remove('hidden');
-  document.getElementById('userGreeting').textContent = user.name + (user.role === 'admin' ? ' (admin)' : '');
+  document.getElementById('userGreeting').textContent = user.role === 'admin'
+    ? user.name + ' (admin)'
+    : user.name + (user.storeName ? ' — ' + user.storeName : '');
   applyRolePermissions();
 
   await loadTree();
@@ -1239,11 +1306,12 @@ document.getElementById('loginSubmitBtn').addEventListener('click', async () => 
 
 document.getElementById('signupSubmitBtn').addEventListener('click', async () => {
   const name = document.getElementById('signupName').value.trim();
+  const storeName = document.getElementById('signupStoreName').value.trim();
   const phone = document.getElementById('signupEmail').value.trim().replace(/\s|-/g, '');
   const password = document.getElementById('signupPassword').value;
   const errEl = document.getElementById('signupError');
 
-  if (!name || !phone || !password) {
+  if (!name || !storeName || !phone || !password) {
     errEl.textContent = 'Please fill in all fields.';
     errEl.classList.remove('hidden');
     return;
@@ -1261,7 +1329,7 @@ document.getElementById('signupSubmitBtn').addEventListener('click', async () =>
     const res = await fetch('/api/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, phone, password })
+      body: JSON.stringify({ name, storeName, phone, password })
     });
     const data = await res.json();
     if (!res.ok) {
@@ -1272,6 +1340,7 @@ document.getElementById('signupSubmitBtn').addEventListener('click', async () =>
     errEl.classList.add('hidden');
     setAuthToken(data.token);
     document.getElementById('signupName').value = '';
+    document.getElementById('signupStoreName').value = '';
     document.getElementById('signupEmail').value = '';
     document.getElementById('signupPassword').value = '';
     await showMainApp(data.user);
@@ -2007,25 +2076,21 @@ document.getElementById('tabCartonsBtn').addEventListener('click', () => switchS
 function renderStorageGrid() {
   const grid = document.getElementById('storageGrid');
   grid.innerHTML = '';
-  const list = activeStorageTab === 'stickers' ? stickers : cartons;
   const color = 'var(--accent-2)';
 
-  if (!list.length) {
-    const note = document.createElement('div');
-    note.className = 'empty-note';
-    note.textContent = activeStorageTab === 'stickers'
-      ? 'No stickers logged yet. Add the first one below.'
-      : 'No cartons logged yet. Add the first one below.';
-    grid.appendChild(note);
-  }
+  if (activeStorageTab === 'stickers') {
+    if (!stickers.length) {
+      const note = document.createElement('div');
+      note.className = 'empty-note';
+      note.textContent = 'No stickers logged yet. Add the first one below.';
+      grid.appendChild(note);
+    }
+    stickers.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.style.setProperty('--depth-color', color);
+      card.style.cursor = 'default';
 
-  list.forEach(item => {
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.style.setProperty('--depth-color', color);
-    card.style.cursor = 'default';
-
-    if (activeStorageTab === 'stickers') {
       if (item.hasImage) {
         const img = document.createElement('img');
         img.className = 'thumb';
@@ -2042,17 +2107,49 @@ function renderStorageGrid() {
       meta.className = 'meta';
       meta.textContent = (item.amount !== null && item.amount !== undefined) ? 'Qty: ' + item.amount : 'no amount set';
       card.appendChild(meta);
-    } else {
+
+      const editBtn = document.createElement('div');
+      editBtn.className = 'edit-btn';
+      editBtn.textContent = '⋯';
+      editBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openActionMenu(item.id, 'sticker', item.name);
+      });
+      card.appendChild(editBtn);
+
+      grid.appendChild(card);
+    });
+  } else {
+    const singles = cartons.filter(c => !c.parentName);
+    const groupNames = [...new Set(cartons.filter(c => c.parentName).map(c => c.parentName))];
+
+    if (!singles.length && !groupNames.length) {
+      const note = document.createElement('div');
+      note.className = 'empty-note';
+      note.textContent = 'No cartons logged yet. Add the first one below.';
+      grid.appendChild(note);
+    }
+
+    singles.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.style.setProperty('--depth-color', color);
+      card.style.cursor = 'default';
+
       const name = document.createElement('div');
       name.className = 'name';
-      name.textContent = item.name + (item.clientName ? ' · ' + item.clientName : '');
+      name.textContent = item.name + (item.clientName ? ' — ' + item.clientName : '');
       card.appendChild(name);
 
       const stock = computeCartonStock(item, sales);
-      const extraText = item.extraPieces ? ` + ${item.extraPieces} loose` : '';
       const meta = document.createElement('div');
       meta.className = 'meta';
-      meta.textContent = `${item.unitsPerCarton || 0}/carton · ${item.cartonCount || 0} cartons${extraText} · ${stock.assigned} assigned · ${stock.sold} sold · ${stock.remaining} left`;
+      if (isAdmin()) {
+        const extraText = item.extraPieces ? ` + ${item.extraPieces} loose` : '';
+        meta.textContent = `${item.unitsPerCarton || 0}/carton · ${item.cartonCount || 0} cartons${extraText} · ${stock.assigned} assigned · ${stock.sold} sold · ${stock.remaining} left`;
+      } else {
+        meta.textContent = `${stock.assigned} total · ${stock.sold} sold · ${stock.remaining} left`;
+      }
       card.appendChild(meta);
 
       if (stock.shortage) {
@@ -2064,19 +2161,51 @@ function renderStorageGrid() {
         warn.textContent = `⚠ Low stock — at or below alert level of ${stock.threshold}`;
         card.appendChild(warn);
       }
-    }
 
-    const editBtn = document.createElement('div');
-    editBtn.className = 'edit-btn';
-    editBtn.textContent = '⋯';
-    editBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      openActionMenu(item.id, activeStorageTab === 'stickers' ? 'sticker' : 'carton', item.name);
+      const editBtn = document.createElement('div');
+      editBtn.className = 'edit-btn';
+      editBtn.textContent = '⋯';
+      editBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openActionMenu(item.id, 'carton', item.name);
+      });
+      card.appendChild(editBtn);
+
+      grid.appendChild(card);
     });
-    card.appendChild(editBtn);
 
-    grid.appendChild(card);
-  });
+    groupNames.forEach(parentName => {
+      const variants = cartons.filter(c => c.parentName === parentName);
+      const totalRemaining = variants.reduce((sum, v) => sum + computeCartonStock(v, sales).remaining, 0);
+
+      const card = document.createElement('div');
+      card.className = 'card group-card';
+      card.style.setProperty('--depth-color', color);
+
+      const name = document.createElement('div');
+      name.className = 'name';
+      name.textContent = parentName;
+      card.appendChild(name);
+
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      meta.textContent = `${variants.length} options · ${totalRemaining} left total`;
+      card.appendChild(meta);
+
+      const swatchRow = document.createElement('div');
+      swatchRow.className = 'swatch-row';
+      variants.forEach(v => {
+        const dot = document.createElement('div');
+        dot.className = 'swatch-dot';
+        dot.style.background = v.variantColor || 'var(--ink-soft)';
+        swatchRow.appendChild(dot);
+      });
+      card.appendChild(swatchRow);
+
+      card.addEventListener('click', () => openVariantPicker(parentName, variants));
+      grid.appendChild(card);
+    });
+  }
 
   const addCard = document.createElement('div');
   addCard.className = 'card add-card';
@@ -2086,7 +2215,37 @@ function renderStorageGrid() {
   grid.appendChild(addCard);
 }
 
+function openVariantPicker(parentName, variants) {
+  document.getElementById('variantPickerTitle').textContent = parentName;
+  const gridEl = document.getElementById('variantPickerGrid');
+  gridEl.innerHTML = '';
+  variants.forEach(v => {
+    const pill = document.createElement('div');
+    pill.className = 'variant-pill';
+    pill.style.background = v.variantColor || 'var(--ink-soft)';
+    const stock = computeCartonStock(v, sales);
+    pill.innerHTML = `${v.variantLabel}<span class="stock-sub">${stock.remaining} left</span>`;
+    pill.addEventListener('click', () => {
+      document.getElementById('variantPickerOverlay').classList.add('hidden');
+      openActionMenu(v.id, 'carton', parentName + ' — ' + v.variantLabel);
+    });
+    gridEl.appendChild(pill);
+  });
+  document.getElementById('variantPickerOverlay').classList.remove('hidden');
+}
+document.getElementById('variantPickerCancelBtn').addEventListener('click', () => {
+  document.getElementById('variantPickerOverlay').classList.add('hidden');
+});
+document.getElementById('variantPickerOverlay').addEventListener('click', (e) => {
+  if (e.target.id === 'variantPickerOverlay') document.getElementById('variantPickerOverlay').classList.add('hidden');
+});
+
 function updateCartonTotalPreview() {
+  if (!isAdmin()) {
+    const total = Number(document.getElementById('promoterTotalPcsInput').value) || 0;
+    document.getElementById('cartonTotalPreview').textContent = 'Total: ' + total + ' pieces';
+    return;
+  }
   const units = Number(document.getElementById('unitsPerCartonInput').value) || 0;
   const cartonCount = Number(document.getElementById('cartonCountInput').value) || 0;
   const extra = Number(document.getElementById('extraPiecesInput').value) || 0;
@@ -2095,6 +2254,7 @@ function updateCartonTotalPreview() {
 document.getElementById('unitsPerCartonInput').addEventListener('input', updateCartonTotalPreview);
 document.getElementById('cartonCountInput').addEventListener('input', updateCartonTotalPreview);
 document.getElementById('extraPiecesInput').addEventListener('input', updateCartonTotalPreview);
+document.getElementById('promoterTotalPcsInput').addEventListener('input', updateCartonTotalPreview);
 
 function openStorageSheet(id, type) {
   editingStorageId = id;
@@ -2122,11 +2282,13 @@ function openStorageSheet(id, type) {
 
   document.getElementById('storageStickerFields').classList.toggle('hidden', type !== 'sticker');
   document.getElementById('storageCartonFields').classList.toggle('hidden', type !== 'carton');
+  document.getElementById('promoterTotalFields').classList.toggle('hidden', isAdmin());
+  document.getElementById('adminCartonFields').classList.toggle('hidden', !isAdmin());
 
   if (id) {
     const list = type === 'sticker' ? stickers : cartons;
     const item = list.find(x => x.id === id);
-    title.textContent = 'Edit ' + (type === 'sticker' ? 'sticker' : 'carton');
+    title.textContent = 'Edit ' + (type === 'sticker' ? 'sticker' : (item.parentName ? item.parentName + ' — ' + item.variantLabel : 'carton'));
     nameInput.value = item.name;
     deleteBtn.classList.remove('hidden');
     if (type === 'sticker') {
@@ -2140,12 +2302,16 @@ function openStorageSheet(id, type) {
           }
         });
       }
-    } else {
+    } else if (isAdmin()) {
       unitsInput.value = item.unitsPerCarton !== undefined ? item.unitsPerCarton : '';
       cartonCountInput.value = item.cartonCount !== undefined ? item.cartonCount : '';
       extraPiecesInput.value = item.extraPieces !== undefined ? item.extraPieces : '';
       clientInput.value = item.clientName || '';
       thresholdInput.value = (item.threshold !== undefined && item.threshold !== null) ? item.threshold : '';
+      updateCartonTotalPreview();
+    } else {
+      const stock = computeCartonStock(item, sales);
+      document.getElementById('promoterTotalPcsInput').value = stock.assigned;
       updateCartonTotalPreview();
     }
   } else {
@@ -2157,6 +2323,7 @@ function openStorageSheet(id, type) {
     extraPiecesInput.value = '';
     clientInput.value = '';
     thresholdInput.value = '';
+    document.getElementById('promoterTotalPcsInput').value = '';
     updateCartonTotalPreview();
     deleteBtn.classList.add('hidden');
   }
@@ -2268,6 +2435,27 @@ document.getElementById('storageSaveBtn').addEventListener('click', async () => 
       await logHistory('sticker', newItem.id, name, 'added', `Qty: ${amount ?? '—'}` + (newItem.hasImage ? ', with picture' : ''));
     }
     await saveStickers();
+  } else if (!isAdmin()) {
+    // Promoter: simple running total, preserve everything admin-managed (client, threshold, variant info)
+    const totalRaw = document.getElementById('promoterTotalPcsInput').value;
+    const total = totalRaw === '' ? 0 : Number(totalRaw);
+
+    if (editingStorageId) {
+      const item = cartons.find(x => x.id === editingStorageId);
+      const oldTotal = computeCartonStock(item, sales).assigned;
+      item.name = name;
+      item.unitsPerCarton = 0;
+      item.cartonCount = 0;
+      item.extraPieces = total;
+      if (oldTotal !== total) {
+        await logHistory('carton', editingStorageId, name, 'edited', `Total pieces: ${oldTotal} → ${total}`);
+      }
+    } else {
+      const newItem = { id: uid(), name, unitsPerCarton: 0, cartonCount: 0, extraPieces: total, clientName: '', threshold: null };
+      cartons.push(newItem);
+      await logHistory('carton', newItem.id, name, 'added', `Total pieces: ${total}`);
+    }
+    await saveCartons();
   } else {
     const unitsRaw = document.getElementById('unitsPerCartonInput').value;
     const cartonRaw = document.getElementById('cartonCountInput').value;
@@ -2703,14 +2891,26 @@ document.getElementById('assignSaveBtn').addEventListener('click', async () => {
 
 /* ---------- Admin Sales Browser (promoter drill-down) ---------- */
 
-let adminSalesState = { level: 'promoters', promoterId: null, mode: null, range: null };
+let adminSalesState = { level: 'promoters', promoterId: null, mode: null, range: 'today' };
 
 const RANGE_OPTIONS = [
-  { key: 'month', label: 'This month', days: 30 },
+  { key: 'today', label: 'Today', days: 0 },
+  { key: 'week', label: 'Last week', days: 7 },
+  { key: 'month', label: 'Last month', days: 30 },
   { key: '3months', label: 'Last 3 months', days: 90 },
   { key: '6months', label: 'Last 6 months', days: 180 },
-  { key: 'year', label: 'This year', days: 365 }
+  { key: 'year', label: 'Last year', days: 365 }
 ];
+
+function rangeCutoff(rangeKey) {
+  if (rangeKey === 'today') {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }
+  const rangeObj = RANGE_OPTIONS.find(r => r.key === rangeKey);
+  return Date.now() - (rangeObj ? rangeObj.days : 0) * 24 * 60 * 60 * 1000;
+}
 
 function makeCrumb(text, onClick, isCurrent) {
   const c = document.createElement('div');
@@ -2742,27 +2942,37 @@ function renderAdminSalesCrumbs() {
   const el = document.getElementById('adminSalesCrumbs');
   el.innerHTML = '';
   el.appendChild(makeCrumb('All Promoters', () => {
-    adminSalesState = { level: 'promoters', promoterId: null, mode: null, range: null };
+    adminSalesState = { level: 'promoters', promoterId: null, mode: null, range: 'today' };
     renderAdminSalesBrowser();
   }, adminSalesState.level === 'promoters'));
 
   if (adminSalesState.promoterId) {
     const promoter = allUsers.find(u => u.id === adminSalesState.promoterId);
     el.appendChild(makeCrumb(promoter ? promoter.name : '…', () => {
-      adminSalesState.level = 'menu'; adminSalesState.mode = null; adminSalesState.range = null;
+      adminSalesState.level = 'menu'; adminSalesState.mode = null;
       renderAdminSalesBrowser();
     }, adminSalesState.level === 'menu'));
   }
   if (adminSalesState.mode) {
-    el.appendChild(makeCrumb(adminSalesState.mode === 'sales' ? 'Sales' : 'Storage', () => {
-      adminSalesState.level = 'range'; adminSalesState.range = null;
+    el.appendChild(makeCrumb(adminSalesState.mode === 'sales' ? 'Sales' : 'Storage', () => {}, adminSalesState.level === 'detail'));
+  }
+}
+
+function renderRangeSwitcher(container) {
+  const row = document.createElement('div');
+  row.className = 'crumbs';
+  row.style.marginBottom = '14px';
+  RANGE_OPTIONS.forEach(r => {
+    const pill = document.createElement('div');
+    pill.className = 'crumb' + (adminSalesState.range === r.key ? ' current' : '');
+    pill.textContent = r.label;
+    pill.addEventListener('click', () => {
+      adminSalesState.range = r.key;
       renderAdminSalesBrowser();
-    }, adminSalesState.level === 'range'));
-  }
-  if (adminSalesState.range) {
-    const rangeObj = RANGE_OPTIONS.find(r => r.key === adminSalesState.range);
-    el.appendChild(makeCrumb(rangeObj ? rangeObj.label : '', () => {}, true));
-  }
+    });
+    row.appendChild(pill);
+  });
+  container.appendChild(row);
 }
 
 function renderAdminSalesBrowser() {
@@ -2776,7 +2986,7 @@ function renderAdminSalesBrowser() {
     const grid = document.createElement('div');
     grid.className = 'grid';
     promoters.forEach(p => {
-      grid.appendChild(makeSimpleCard(p.name, 'Tap to view', 'var(--accent-1)', () => {
+      grid.appendChild(makeSimpleCard(p.name, p.storeName || 'Tap to view', 'var(--accent-1)', () => {
         adminSalesState.level = 'menu'; adminSalesState.promoterId = p.id;
         renderAdminSalesBrowser();
       }));
@@ -2786,26 +2996,19 @@ function renderAdminSalesBrowser() {
     const grid = document.createElement('div');
     grid.className = 'grid';
     grid.appendChild(makeSimpleCard('Sales', 'View sales history', 'var(--accent-2)', () => {
-      adminSalesState.level = 'range'; adminSalesState.mode = 'sales';
+      adminSalesState.level = 'detail'; adminSalesState.mode = 'sales'; adminSalesState.range = 'today';
       renderAdminSalesBrowser();
     }));
     grid.appendChild(makeSimpleCard('Storage', 'View cartons & stock', 'var(--accent-3)', () => {
-      adminSalesState.level = 'range'; adminSalesState.mode = 'storage';
+      adminSalesState.level = 'detail'; adminSalesState.mode = 'storage'; adminSalesState.range = 'today';
       renderAdminSalesBrowser();
     }));
     content.appendChild(grid);
-  } else if (adminSalesState.level === 'range') {
-    const grid = document.createElement('div');
-    grid.className = 'grid';
-    RANGE_OPTIONS.forEach(r => {
-      grid.appendChild(makeSimpleCard(r.label, '', 'var(--accent-4)', () => {
-        adminSalesState.level = 'detail'; adminSalesState.range = r.key;
-        renderAdminSalesBrowser();
-      }));
-    });
-    content.appendChild(grid);
   } else if (adminSalesState.level === 'detail') {
-    renderAdminSalesDetail(content);
+    renderRangeSwitcher(content);
+    const detailArea = document.createElement('div');
+    content.appendChild(detailArea);
+    renderAdminSalesDetail(detailArea);
   }
 }
 
@@ -2813,7 +3016,7 @@ async function renderAdminSalesDetail(content) {
   content.innerHTML = '<div class="empty-note">Loading…</div>';
   const promoter = allUsers.find(u => u.id === adminSalesState.promoterId);
   const rangeObj = RANGE_OPTIONS.find(r => r.key === adminSalesState.range);
-  const cutoff = Date.now() - rangeObj.days * 24 * 60 * 60 * 1000;
+  const cutoff = rangeCutoff(adminSalesState.range);
 
   if (adminSalesState.mode === 'sales') {
     let userSales = [];
