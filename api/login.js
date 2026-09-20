@@ -11,7 +11,7 @@ module.exports = async (req, res) => {
     const { phone, password } = req.body || {};
     if (!phone || !password) return res.status(400).json({ error: 'Missing fields' });
 
-    const rows = await sql`SELECT id, name, phone, password_hash, role FROM users WHERE phone = ${phone}`;
+    const rows = await sql`SELECT id, name, phone, password_hash, role, store_name FROM users WHERE phone = ${phone}`;
     const user = rows[0];
     if (!user) return res.status(401).json({ error: 'Incorrect phone number or password.' });
 
@@ -23,7 +23,7 @@ module.exports = async (req, res) => {
 
     return res.status(200).json({
       token,
-      user: { id: user.id, name: user.name, phone: user.phone, role: user.role }
+      user: { id: user.id, name: user.name, phone: user.phone, role: user.role, storeName: user.store_name }
     });
   } catch (err) {
     console.error(err);

@@ -13,8 +13,10 @@ async function ensureSchema() {
       phone TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
       role TEXT NOT NULL DEFAULT 'promoter',
+      store_name TEXT,
       created_at TIMESTAMPTZ DEFAULT now()
     )`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS store_name TEXT`;
     await sql`CREATE TABLE IF NOT EXISTS sessions (
       token TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -42,11 +44,13 @@ async function getUserFromRequest(req) {
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
   if (!token) return null;
   const rows = await sql`
-    SELECT u.id, u.name, u.phone, u.role
+    SELECT u.id, u.name, u.phone, u.role, u.store_name
     FROM sessions s JOIN users u ON u.id = s.user_id
     WHERE s.token = ${token}
   `;
-  return rows[0] || null;
+  if (!rows[0]) return null;
+  const r = rows[0];
+  return { id: r.id, name: r.name, phone: r.phone, role: r.role, storeName: r.store_name };
 }
 
 function setCors(res) {
