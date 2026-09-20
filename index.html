@@ -1108,68 +1108,53 @@ body {
 <script>
 const DEPTH_COLORS = ['var(--accent-1)', 'var(--accent-2)', 'var(--accent-3)', 'var(--accent-4)'];
 const TREE_KEY = 'workspace-tree';
-const DB_NAME = 'workspace-db';
-const STORE_NAME = 'kv';
-let dbPromise = null;
 
-function openDB() {
-  if (dbPromise) return dbPromise;
-  dbPromise = new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
-    req.onupgradeneeded = () => {
-      req.result.createObjectStore(STORE_NAME);
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+let authToken = localStorage.getItem('auth-token') || null;
+function authHeaders() {
+  return authToken ? { 'Authorization': 'Bearer ' + authToken } : {};
+}
+function setAuthToken(token) {
+  authToken = token;
+  if (token) localStorage.setItem('auth-token', token);
+  else localStorage.removeItem('auth-token');
+}
+
+async function idbGet(key) {
+  const res = await fetch('/api/data?key=' + encodeURIComponent(key), { headers: authHeaders() });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.value;
+}
+
+async function idbSet(key, value) {
+  const res = await fetch('/api/data', {
+    method: 'PUT',
+    headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+    body: JSON.stringify({ key, value })
   });
-  return dbPromise;
+  if (!res.ok) throw new Error('Save failed');
+  return true;
 }
 
-function idbGet(key) {
-  return openDB().then(db => new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readonly');
-    const req = tx.objectStore(STORE_NAME).get(key);
-    req.onsuccess = () => resolve(req.result === undefined ? null : req.result);
-    req.onerror = () => reject(req.error);
-  }));
+async function idbDelete(key) {
+  const res = await fetch('/api/data?key=' + encodeURIComponent(key), {
+    method: 'DELETE',
+    headers: authHeaders()
+  });
+  if (!res.ok) throw new Error('Delete failed');
+  return true;
 }
 
-function idbSet(key, value) {
-  return openDB().then(db => new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    tx.objectStore(STORE_NAME).put(value, key);
-    tx.oncomplete = () => resolve(true);
-    tx.onerror = () => reject(tx.error);
-  }));
-}
-
-function idbDelete(key) {
-  return openDB().then(db => new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    tx.objectStore(STORE_NAME).delete(key);
-    tx.oncomplete = () => resolve(true);
-    tx.onerror = () => reject(tx.error);
-  }));
-}
-
-const USERS_KEY = 'app-users';
-const SESSION_KEY = 'app-session';
 let currentUser = null;
 let allUsers = [];
 
-async function loadUsers() {
+async function loadAdminUsersList() {
   try {
-    const u = await idbGet(USERS_KEY);
-    allUsers = u ? JSON.parse(u) : [];
+    const res = await fetch('/api/admin-users', { headers: authHeaders() });
+    if (!res.ok) { allUsers = []; return; }
+    const data = await res.json();
+    allUsers = data.users || [];
   } catch (e) { allUsers = []; }
-  if (!allUsers.length) {
-    allUsers.push({ id: 'admin', name: 'Admin', email: '01000000000', password: 'admin123', role: 'admin' });
-    await idbSet(USERS_KEY, JSON.stringify(allUsers));
-  }
-}
-
-async function saveUsers() {
-  await idbSet(USERS_KEY, JSON.stringify(allUsers));
 }
 
 function showAuthScreen(which) {
@@ -1206,6 +1191,8 @@ async function showMainApp(user) {
   document.getElementById('userGreeting').textContent = user.name + (user.role === 'admin' ? ' (admin)' : '');
   applyRolePermissions();
 
+  await loadTree();
+  if (isAdmin()) await loadAdminUsersList();
   await loadStorage();
   await loadHistory();
   await loadSales();
@@ -1220,57 +1207,85 @@ document.getElementById('loginBackLink').addEventListener('click', (e) => { e.pr
 document.getElementById('signupBackLink').addEventListener('click', (e) => { e.preventDefault(); showAuthScreen('landing'); });
 
 document.getElementById('loginSubmitBtn').addEventListener('click', async () => {
-  const email = document.getElementById('loginEmail').value.trim().replace(/\s|-/g, '');
+  const phone = document.getElementById('loginEmail').value.trim().replace(/\s|-/g, '');
   const password = document.getElementById('loginPassword').value;
   const errEl = document.getElementById('loginError');
-  const user = allUsers.find(u => u.email === email && u.password === password);
-  if (!user) {
-    errEl.textContent = 'Incorrect phone number or password.';
+  const btn = document.getElementById('loginSubmitBtn');
+  btn.disabled = true; btn.textContent = 'Logging in…';
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, password })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      errEl.textContent = data.error || 'Incorrect phone number or password.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+    errEl.classList.add('hidden');
+    setAuthToken(data.token);
+    document.getElementById('loginEmail').value = '';
+    document.getElementById('loginPassword').value = '';
+    await showMainApp(data.user);
+  } catch (e) {
+    errEl.textContent = 'Could not reach the server. Check your connection.';
     errEl.classList.remove('hidden');
-    return;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Log In';
   }
-  errEl.classList.add('hidden');
-  await idbSet(SESSION_KEY, user.id);
-  document.getElementById('loginEmail').value = '';
-  document.getElementById('loginPassword').value = '';
-  await showMainApp(user);
 });
 
 document.getElementById('signupSubmitBtn').addEventListener('click', async () => {
   const name = document.getElementById('signupName').value.trim();
-  const email = document.getElementById('signupEmail').value.trim().replace(/\s|-/g, '');
+  const phone = document.getElementById('signupEmail').value.trim().replace(/\s|-/g, '');
   const password = document.getElementById('signupPassword').value;
   const errEl = document.getElementById('signupError');
 
-  if (!name || !email || !password) {
+  if (!name || !phone || !password) {
     errEl.textContent = 'Please fill in all fields.';
     errEl.classList.remove('hidden');
     return;
   }
-  const egyptPhone = /^(01[0-2,5]\d{8}|\+201[0-2,5]\d{8})$/;
-  if (!egyptPhone.test(email)) {
+  const egyptPhone = /^(01[0-2,5]\d{8})$/;
+  if (!egyptPhone.test(phone)) {
     errEl.textContent = 'Enter a valid Egyptian number, e.g. 01012345678.';
     errEl.classList.remove('hidden');
     return;
   }
-  if (allUsers.some(u => u.email === email)) {
-    errEl.textContent = 'An account with this number already exists.';
+
+  const btn = document.getElementById('signupSubmitBtn');
+  btn.disabled = true; btn.textContent = 'Creating account…';
+  try {
+    const res = await fetch('/api/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, phone, password })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      errEl.textContent = data.error || 'Something went wrong.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+    errEl.classList.add('hidden');
+    setAuthToken(data.token);
+    document.getElementById('signupName').value = '';
+    document.getElementById('signupEmail').value = '';
+    document.getElementById('signupPassword').value = '';
+    await showMainApp(data.user);
+  } catch (e) {
+    errEl.textContent = 'Could not reach the server. Check your connection.';
     errEl.classList.remove('hidden');
-    return;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Create Account';
   }
-  errEl.classList.add('hidden');
-  const newUser = { id: uid(), name, email, password, role: 'promoter' };
-  allUsers.push(newUser);
-  await saveUsers();
-  await idbSet(SESSION_KEY, newUser.id);
-  document.getElementById('signupName').value = '';
-  document.getElementById('signupEmail').value = '';
-  document.getElementById('signupPassword').value = '';
-  await showMainApp(newUser);
 });
 
 document.getElementById('logoutBtn').addEventListener('click', async () => {
-  await idbDelete(SESSION_KEY);
+  try { await fetch('/api/logout', { method: 'POST', headers: authHeaders() }); } catch (e) {}
+  setAuthToken(null);
   currentUser = null;
   showAuthScreen('landing');
 });
@@ -1963,6 +1978,7 @@ function switchSection(section) {
   document.getElementById('tabStorageBtn').classList.toggle('active', section === 'storage');
   document.getElementById('tabSalesBtn').classList.toggle('active', section === 'sales');
   document.getElementById('tabAdminBtn').classList.toggle('active', section === 'admin');
+  if (section === 'workspace') render();
   if (section === 'storage') { if (!canAccessStorageTab(activeStorageTab)) activeStorageTab = 'cartons'; renderStorageGrid(); }
   if (section === 'sales') {
     document.getElementById('promoterSalesView').classList.toggle('hidden', isAdmin());
@@ -2859,18 +2875,23 @@ async function renderAdminSalesDetail(content) {
 /* ---------- End Sales & Admin ---------- */
 
 async function init() {
-  await loadTree();
-  await loadUsers();
   document.getElementById('loadingState').classList.add('hidden');
-  render();
 
-  let sessionUserId = null;
-  try { sessionUserId = await idbGet(SESSION_KEY); } catch (e) {}
-  const sessionUser = sessionUserId ? allUsers.find(u => u.id === sessionUserId) : null;
+  if (!authToken) {
+    showAuthScreen('landing');
+    return;
+  }
 
-  if (sessionUser) {
-    await showMainApp(sessionUser);
-  } else {
+  try {
+    const res = await fetch('/api/session', { headers: authHeaders() });
+    if (res.ok) {
+      const data = await res.json();
+      await showMainApp(data.user);
+    } else {
+      setAuthToken(null);
+      showAuthScreen('landing');
+    }
+  } catch (e) {
     showAuthScreen('landing');
   }
 }
