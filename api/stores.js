@@ -30,6 +30,15 @@ module.exports = async (req, res) => {
       return res.status(200).json({ store: { id, name: name.trim() } });
     }
 
+    if (req.method === 'PUT') {
+      const { storeId, name } = req.body || {};
+      if (!storeId || !name || !name.trim()) return res.status(400).json({ error: 'Missing storeId or name' });
+      const existing = await sql`SELECT id FROM stores WHERE id = ${storeId}`;
+      if (!existing.length) return res.status(404).json({ error: 'Store not found' });
+      await sql`UPDATE stores SET name = ${name.trim()} WHERE id = ${storeId}`;
+      return res.status(200).json({ store: { id: storeId, name: name.trim() } });
+    }
+
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
     console.error(err);
