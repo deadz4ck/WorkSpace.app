@@ -175,6 +175,74 @@ body {
   border-bottom-width: 3px;
 }
 
+.admin-crumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0;
+  margin-bottom: 16px;
+}
+
+.admin-crumb {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  cursor: pointer;
+  padding: 3px 2px;
+  transition: color .15s ease;
+}
+.admin-crumb:not(:first-child)::before {
+  content: '›';
+  margin: 0 6px;
+  color: var(--line);
+  font-weight: 400;
+}
+.admin-crumb:hover { color: var(--ink); }
+.admin-crumb.current {
+  color: var(--accent-2);
+  font-weight: 600;
+  cursor: default;
+}
+
+.range-picker-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font-family: 'Roboto Slab', serif;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: 16px;
+  transition: transform .12s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.range-picker-btn:hover { border-color: var(--ink-soft); box-shadow: 0 1px 4px rgba(35,33,29,0.08); }
+.range-picker-btn:active { transform: scale(0.96); }
+.range-picker-btn .chev { color: var(--ink-soft); margin-left: 2px; }
+
+.range-picker-item {
+  padding: 13px 14px;
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+  border-bottom: 1px solid var(--line);
+  transition: background .15s ease, transform .1s ease;
+}
+.range-picker-item:last-child { border-bottom: none; }
+.range-picker-item:hover { background: var(--paper); }
+.range-picker-item:active { transform: scale(0.98); }
+.range-picker-item.current {
+  color: var(--accent-2);
+  font-weight: 600;
+}
+
 .crumb .arrow {
   margin-left: 8px;
   color: var(--line);
@@ -351,6 +419,11 @@ body {
 .sheet select:focus {
   outline: 2px solid var(--depth-color, var(--accent-1));
   outline-offset: 1px;
+}
+.locked-field {
+  background: var(--line) !important;
+  color: var(--ink-soft) !important;
+  cursor: not-allowed;
 }
 
 .image-row {
@@ -699,6 +772,24 @@ body {
   z-index: 1;
 }
 
+.app-loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.app-loading-logo {
+  width: 130px;
+  animation: loadingPulse 1.4s ease-in-out infinite;
+}
+@keyframes loadingPulse {
+  0%, 100% { opacity: 0.55; transform: scale(0.97); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
 .auth-card {
   width: 100%;
   max-width: 380px;
@@ -843,6 +934,10 @@ body {
 </head>
 <body>
 
+<div id="appLoadingScreen" class="app-loading-screen">
+  <img src="logo.webp" alt="" class="app-loading-logo" />
+</div>
+
 <svg class="bg-strings" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
   <path d="M -20 60 C 80 20, 140 100, 90 150 C 40 200, 160 190, 230 140" stroke="#B23A2E" stroke-width="1.4" fill="none" opacity="0.10"/>
   <path d="M 420 260 C 320 240, 300 320, 360 350 C 420 380, 300 420, 250 380" stroke="#B23A2E" stroke-width="1.4" fill="none" opacity="0.09"/>
@@ -851,7 +946,7 @@ body {
   <path d="M 60 380 C 140 360, 130 440, 60 450" stroke="#B23A2E" stroke-width="1.2" fill="none" opacity="0.07"/>
 </svg>
 
-<div id="landingView" class="auth-screen">
+<div id="landingView" class="auth-screen hidden">
   <div class="auth-card">
     <img src="logo.webp" alt="WorkSpace" class="auth-logo" />
     <p class="auth-tagline">Organize your stock, stickers, and sales — all in one place.</p>
@@ -946,7 +1041,7 @@ body {
     </button>
   </nav>
 
-  <div id="workspaceSection">
+  <div id="workspaceSection" class="hidden">
     <div class="header">
       <div class="wordmark">
         <span class="work">Work</span><span class="space">space</span>
@@ -1260,6 +1355,14 @@ body {
   </div>
 </div>
 
+<div class="overlay hidden" id="rangePickerOverlay">
+  <div class="sheet" id="rangePickerSheet" style="max-width:380px;">
+    <h2>Time range</h2>
+    <div id="rangePickerList"></div>
+    <button class="btn btn-secondary" id="rangePickerCancelBtn" style="width:100%; margin-top:14px;">Cancel</button>
+  </div>
+</div>
+
 <div class="overlay hidden" id="variantPickerOverlay">
   <div class="sheet" id="variantPickerSheet" style="max-width:400px;">
     <h2 id="variantPickerTitle">Roll On</h2>
@@ -1330,6 +1433,7 @@ async function loadAdminUsersList() {
 }
 
 function showAuthScreen(which) {
+  document.getElementById('appLoadingScreen').classList.add('hidden');
   document.getElementById('landingView').classList.toggle('hidden', which !== 'landing');
   document.getElementById('loginView').classList.toggle('hidden', which !== 'login');
   document.getElementById('signupView').classList.toggle('hidden', which !== 'signup');
@@ -1363,12 +1467,12 @@ async function showMainApp(user) {
 
   if (user.role === 'admin') {
     document.getElementById('mainApp').classList.add('hidden');
+    document.getElementById('appLoadingScreen').classList.add('hidden');
     document.getElementById('areaChooserView').classList.remove('hidden');
     return;
   }
 
   document.getElementById('areaChooserView').classList.add('hidden');
-  document.getElementById('mainApp').classList.remove('hidden');
   document.getElementById('userGreeting').textContent = user.name + (user.storeName ? ' — ' + user.storeName : '');
   document.getElementById('switchAreaBtn').classList.add('hidden');
   applyRolePermissions();
@@ -1378,13 +1482,16 @@ async function showMainApp(user) {
   await loadStorage();
   await loadHistory();
   await loadSales();
+
+  document.getElementById('appLoadingScreen').classList.add('hidden');
+  document.getElementById('mainApp').classList.remove('hidden');
   switchSection(isManager() ? 'admin' : 'sales');
 }
 
 async function enterAdminArea(context) {
   adminContext = context;
+  document.getElementById('appLoadingScreen').classList.remove('hidden');
   document.getElementById('areaChooserView').classList.add('hidden');
-  document.getElementById('mainApp').classList.remove('hidden');
   document.getElementById('userGreeting').textContent = currentUser.name + ' (admin)';
   document.getElementById('switchAreaBtn').classList.remove('hidden');
   document.getElementById('switchAreaLabel').textContent = context === 'office' ? 'Office' : 'Factory';
@@ -1399,6 +1506,9 @@ async function enterAdminArea(context) {
   await loadStorage();
   await loadHistory();
   if (!isFactory) await loadSales();
+
+  document.getElementById('appLoadingScreen').classList.add('hidden');
+  document.getElementById('mainApp').classList.remove('hidden');
 
   if (isFactory) {
     activeStorageTab = 'cartons';
@@ -2363,12 +2473,15 @@ function renderStorageGrid() {
     });
   }
 
-  const addCard = document.createElement('div');
-  addCard.className = 'card add-card';
-  addCard.style.setProperty('--depth-color', color);
-  addCard.innerHTML = '<div class="plus">+</div><div class="label">Add new</div>';
-  addCard.addEventListener('click', () => openStorageSheet(null, activeStorageTab === 'stickers' ? 'sticker' : 'carton'));
-  grid.appendChild(addCard);
+  const canAddHere = activeStorageTab === 'stickers' || isPrivileged();
+  if (canAddHere) {
+    const addCard = document.createElement('div');
+    addCard.className = 'card add-card';
+    addCard.style.setProperty('--depth-color', color);
+    addCard.innerHTML = '<div class="plus">+</div><div class="label">Add new</div>';
+    addCard.addEventListener('click', () => openStorageSheet(null, activeStorageTab === 'stickers' ? 'sticker' : 'carton'));
+    grid.appendChild(addCard);
+  }
 }
 
 function openVariantPicker(parentName, variants) {
@@ -2445,12 +2558,16 @@ function openStorageSheet(id, type) {
   document.getElementById('promoterTotalFields').classList.toggle('hidden', isPrivileged());
   document.getElementById('adminCartonFields').classList.toggle('hidden', !isPrivileged());
 
+  const lockedCarton = type === 'carton' && !isPrivileged();
+  nameInput.disabled = lockedCarton;
+  nameInput.classList.toggle('locked-field', lockedCarton);
+
   if (id) {
     const list = type === 'sticker' ? stickers : cartons;
     const item = list.find(x => x.id === id);
     title.textContent = 'Edit ' + (type === 'sticker' ? 'sticker' : (item.parentName ? item.parentName + ' — ' + item.variantLabel : 'carton'));
     nameInput.value = item.name;
-    deleteBtn.classList.remove('hidden');
+    deleteBtn.classList.toggle('hidden', lockedCarton);
     if (type === 'sticker') {
       amountInput.value = (item.amount !== null && item.amount !== undefined) ? item.amount : '';
       if (item.hasImage) {
@@ -2596,26 +2713,24 @@ document.getElementById('storageSaveBtn').addEventListener('click', async () => 
     }
     await saveStickers();
   } else if (!isPrivileged()) {
-    // Promoter: simple running total, preserve everything admin-managed (client, threshold, variant info)
+    // Promoter: simple running total only. Name is never taken from the input,
+    // so a promoter can't rename an existing product or create a new one.
     const totalRaw = document.getElementById('promoterTotalPcsInput').value;
     const total = totalRaw === '' ? 0 : Number(totalRaw);
 
     if (editingStorageId) {
       const item = cartons.find(x => x.id === editingStorageId);
       const oldTotal = computeCartonStock(item, sales).assigned;
-      item.name = name;
       item.unitsPerCarton = 0;
       item.cartonCount = 0;
       item.extraPieces = total;
       if (oldTotal !== total) {
-        await logHistory('carton', editingStorageId, name, 'edited', `Total pieces: ${oldTotal} → ${total}`);
+        await logHistory('carton', editingStorageId, item.name, 'edited', `Total pieces: ${oldTotal} → ${total}`);
       }
-    } else {
-      const newItem = { id: uid(), name, unitsPerCarton: 0, cartonCount: 0, extraPieces: total, clientName: '', threshold: null };
-      cartons.push(newItem);
-      await logHistory('carton', newItem.id, name, 'added', `Total pieces: ${total}`);
+      await saveCartons();
     }
-    await saveCartons();
+    // Promoters can't reach the "new item" path at all (Add New is hidden for them),
+    // so there is nothing to create here.
   } else {
     const unitsRaw = document.getElementById('unitsPerCartonInput').value;
     const cartonRaw = document.getElementById('cartonCountInput').value;
@@ -3138,9 +3253,9 @@ function rangeCutoff(rangeKey) {
   return Date.now() - (rangeObj ? rangeObj.days : 0) * 24 * 60 * 60 * 1000;
 }
 
-function makeCrumb(text, onClick, isCurrent) {
-  const c = document.createElement('div');
-  c.className = 'crumb' + (isCurrent ? ' current' : '');
+function makeAdminCrumb(text, onClick, isCurrent) {
+  const c = document.createElement('span');
+  c.className = 'admin-crumb' + (isCurrent ? ' current' : '');
   c.textContent = text;
   c.addEventListener('click', onClick);
   return c;
@@ -3166,46 +3281,64 @@ function makeSimpleCard(title, subtitle, color, onClick) {
 
 function renderAdminSalesCrumbs() {
   const el = document.getElementById('adminSalesCrumbs');
+  el.className = 'admin-crumbs';
   el.innerHTML = '';
-  el.appendChild(makeCrumb('Stores', () => {
+  el.appendChild(makeAdminCrumb('Stores', () => {
     adminSalesState = { level: 'stores', storeName: null, promoterId: null, mode: null, range: 'today' };
     renderAdminSalesBrowser();
   }, adminSalesState.level === 'stores'));
 
   if (adminSalesState.storeName) {
-    el.appendChild(makeCrumb(adminSalesState.storeName, () => {
+    el.appendChild(makeAdminCrumb(adminSalesState.storeName, () => {
       adminSalesState.level = 'promoters'; adminSalesState.promoterId = null; adminSalesState.mode = null;
       renderAdminSalesBrowser();
     }, adminSalesState.level === 'promoters'));
   }
   if (adminSalesState.promoterId) {
     const promoter = allUsers.find(u => u.id === adminSalesState.promoterId);
-    el.appendChild(makeCrumb(promoter ? promoter.name : '…', () => {
+    el.appendChild(makeAdminCrumb(promoter ? promoter.name : '…', () => {
       adminSalesState.level = 'menu'; adminSalesState.mode = null;
       renderAdminSalesBrowser();
     }, adminSalesState.level === 'menu'));
   }
   if (adminSalesState.mode) {
-    el.appendChild(makeCrumb(adminSalesState.mode === 'sales' ? 'Sales' : 'Storage', () => {}, adminSalesState.level === 'detail'));
+    el.appendChild(makeAdminCrumb(adminSalesState.mode === 'sales' ? 'Sales' : 'Storage', () => {}, adminSalesState.level === 'detail'));
   }
 }
 
 function renderRangeSwitcher(container) {
-  const row = document.createElement('div');
-  row.className = 'crumbs';
-  row.style.marginBottom = '14px';
+  const rangeObj = RANGE_OPTIONS.find(r => r.key === adminSalesState.range);
+  const btn = document.createElement('button');
+  btn.className = 'range-picker-btn';
+  btn.innerHTML = `<svg viewBox="0 0 24 24" width="15" height="15"><rect x="3.5" y="5" width="17" height="16" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 9.5h17M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    <span>${rangeObj.label}</span>
+    <svg viewBox="0 0 24 24" width="13" height="13" class="chev"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  btn.addEventListener('click', () => openRangePicker());
+  container.appendChild(btn);
+}
+
+function openRangePicker() {
+  const list = document.getElementById('rangePickerList');
+  list.innerHTML = '';
   RANGE_OPTIONS.forEach(r => {
-    const pill = document.createElement('div');
-    pill.className = 'crumb' + (adminSalesState.range === r.key ? ' current' : '');
-    pill.textContent = r.label;
-    pill.addEventListener('click', () => {
+    const item = document.createElement('div');
+    item.className = 'range-picker-item' + (adminSalesState.range === r.key ? ' current' : '');
+    item.textContent = r.label;
+    item.addEventListener('click', () => {
       adminSalesState.range = r.key;
+      document.getElementById('rangePickerOverlay').classList.add('hidden');
       renderAdminSalesBrowser();
     });
-    row.appendChild(pill);
+    list.appendChild(item);
   });
-  container.appendChild(row);
+  document.getElementById('rangePickerOverlay').classList.remove('hidden');
 }
+document.getElementById('rangePickerCancelBtn').addEventListener('click', () => {
+  document.getElementById('rangePickerOverlay').classList.add('hidden');
+});
+document.getElementById('rangePickerOverlay').addEventListener('click', (e) => {
+  if (e.target.id === 'rangePickerOverlay') document.getElementById('rangePickerOverlay').classList.add('hidden');
+});
 
 function renderAdminSalesBrowser() {
   renderAdminSalesCrumbs();
