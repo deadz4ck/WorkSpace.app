@@ -1170,7 +1170,14 @@ body {
 
 <div class="overlay hidden" id="storePromotersOverlay">
   <div class="sheet" id="storePromotersSheet">
-    <h2 id="storePromotersTitle">Promoters</h2>
+    <h2>Manage store</h2>
+    <span class="field-label">Store name</span>
+    <div class="image-row">
+      <input type="text" id="storeRenameInput" style="flex:1;" />
+      <button class="icon-btn" id="storeRenameSaveBtn">Save</button>
+    </div>
+
+    <span class="field-label">Promoters</span>
     <div id="storePromotersCurrentList" style="margin-bottom:16px;"></div>
     <span class="field-label">Add or move a promoter here</span>
     <select id="addPromoterSelect"></select>
@@ -2523,10 +2530,12 @@ function renderFactoryCategoryItems(contentEl, category) {
     meta.className = 'meta';
     meta.textContent = `${item.unitsPerCarton || 0}/carton · ${item.cartonCount || 0} cartons${extraText} · ${total} total`;
     card.appendChild(meta);
+    card.addEventListener('click', () => openStorageSheet(item.id, 'carton'));
     const editBtn = document.createElement('div');
     editBtn.className = 'edit-btn';
     editBtn.textContent = '⋯';
-    editBtn.addEventListener('click', (e) => { e.stopPropagation(); openActionMenu(item.id, 'carton', item.name); });
+    editBtn.title = 'History';
+    editBtn.addEventListener('click', (e) => { e.stopPropagation(); openHistoryOverlay(item.id, item.name); });
     card.appendChild(editBtn);
     grid.appendChild(card);
   });
@@ -2590,12 +2599,14 @@ function renderCartonsGrid(container, editable) {
     }
 
     if (editable) {
+      card.addEventListener('click', () => openStorageSheet(item.id, 'carton'));
       const editBtn = document.createElement('div');
       editBtn.className = 'edit-btn';
       editBtn.textContent = '⋯';
+      editBtn.title = 'History';
       editBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        openActionMenu(item.id, 'carton', item.name);
+        openHistoryOverlay(item.id, item.name);
       });
       card.appendChild(editBtn);
     }
@@ -2659,7 +2670,7 @@ function openVariantPicker(parentName, variants, editable) {
     pill.innerHTML = `${v.variantLabel}<span class="stock-sub">${stock.remaining} left</span>`;
     pill.addEventListener('click', () => {
       document.getElementById('variantPickerOverlay').classList.add('hidden');
-      if (editable) openActionMenu(v.id, 'carton', parentName + ' — ' + v.variantLabel);
+      if (editable) openStorageSheet(v.id, 'carton');
     });
     if (!editable) pill.style.cursor = 'default';
     gridEl.appendChild(pill);
@@ -3382,7 +3393,7 @@ document.getElementById('createStoreSaveBtn').addEventListener('click', async ()
 let managingStoreId = null;
 function openStorePromotersOverlay(storeId, storeName) {
   managingStoreId = storeId;
-  document.getElementById('storePromotersTitle').textContent = storeName + ' — Promoters';
+  document.getElementById('storeRenameInput').value = storeName;
   renderStorePromotersList();
   const sel = document.getElementById('addPromoterSelect');
   sel.innerHTML = '';
@@ -3394,6 +3405,28 @@ function openStorePromotersOverlay(storeId, storeName) {
   });
   document.getElementById('storePromotersOverlay').classList.remove('hidden');
 }
+
+document.getElementById('storeRenameSaveBtn').addEventListener('click', async () => {
+  const newName = document.getElementById('storeRenameInput').value.trim();
+  if (!newName) { alert('Enter a store name.'); return; }
+  const btn = document.getElementById('storeRenameSaveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const res = await fetch('/api/stores', {
+      method: 'PUT',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+      body: JSON.stringify({ storeId: managingStoreId, name: newName })
+    });
+    if (!res.ok) { alert('Could not rename the store.'); return; }
+    await loadStores();
+    await loadAdminUsersList();
+    renderStorePromotersList();
+  } catch (e) {
+    alert('Could not reach the server.');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save';
+  }
+});
 
 function renderStorePromotersList() {
   const list = document.getElementById('storePromotersCurrentList');
