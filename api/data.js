@@ -1,11 +1,29 @@
 const { sql, ensureSchema, getUserFromRequest, setCors } = require('./_db');
 
 const OWNED_PREFIXES = ['storage-cartons-', 'storage-stickers-', 'storage-history-', 'sales-'];
+const STORE_READONLY_PREFIXES = ['storage-cartons-store-', 'storage-history-store-'];
+const STORE_READWRITE_PREFIXES = ['sales-store-'];
 
 function canAccess(user, key, isWrite) {
   const privileged = user.role === 'admin' || user.role === 'manager';
   if (key === 'workspace-tree') return isWrite ? user.role === 'admin' : true;
   if (key.startsWith('img:') || key.startsWith('stickerimg:')) return true;
+
+  for (const p of STORE_READWRITE_PREFIXES) {
+    if (key.startsWith(p)) {
+      if (privileged) return true;
+      const storeId = key.slice(p.length);
+      return user.storeId === storeId; // assigned promoters can read AND log sales here
+    }
+  }
+  for (const p of STORE_READONLY_PREFIXES) {
+    if (key.startsWith(p)) {
+      if (privileged) return true;
+      if (isWrite) return false; // promoters can view their store's storage, never edit it directly
+      const storeId = key.slice(p.length);
+      return user.storeId === storeId;
+    }
+  }
   for (const p of OWNED_PREFIXES) {
     if (key.startsWith(p)) {
       const ownerId = key.slice(p.length);

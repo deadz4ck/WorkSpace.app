@@ -38,6 +38,26 @@ async function seedDefaultCartons(userId, keySuffix) {
   `;
 }
 
+const FACTORY_CATEGORIES = ['Goods', 'Bottles', 'Caps', 'Stickers'];
+
+function buildFactoryDefaultCartons() {
+  const items = [];
+  FACTORY_CATEGORIES.forEach(cat => {
+    items.push({
+      id: crypto.randomUUID(), name: cat + ' item', category: cat,
+      unitsPerCarton: 0, cartonCount: 0, extraPieces: 0, clientName: '', threshold: null
+    });
+  });
+  return items;
+}
+
+async function seedFactoryCartons(key) {
+  await sql`
+    INSERT INTO kv (key, value, updated_at) VALUES (${key}, ${JSON.stringify(buildFactoryDefaultCartons())}, now())
+    ON CONFLICT (key) DO NOTHING
+  `;
+}
+
 let schemaReady = null;
 async function ensureSchema() {
   if (schemaReady) return schemaReady;
@@ -49,9 +69,16 @@ async function ensureSchema() {
       password_hash TEXT NOT NULL,
       role TEXT NOT NULL DEFAULT 'promoter',
       store_name TEXT,
+      store_id TEXT,
       created_at TIMESTAMPTZ DEFAULT now()
     )`;
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS store_name TEXT`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS store_id TEXT`;
+    await sql`CREATE TABLE IF NOT EXISTS stores (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT now()
+    )`;
     await sql`CREATE TABLE IF NOT EXISTS sessions (
       token TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -71,7 +98,7 @@ async function ensureSchema() {
                 ON CONFLICT (phone) DO NOTHING`;
     }
     await seedDefaultCartons('office', '-shared');
-    await seedDefaultCartons('admin', '-factory');
+    await seedFactoryCartons('storage-cartons-admin-factory');
   })();
   return schemaReady;
 }
@@ -81,13 +108,14 @@ async function getUserFromRequest(req) {
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
   if (!token) return null;
   const rows = await sql`
-    SELECT u.id, u.name, u.phone, u.role, u.store_name
-    FROM sessions s JOIN users u ON u.id = s.user_id
-    WHERE s.token = ${token}
+    SELECT u.id, u.name, u.phone, u.role, u.store_id, s.name AS store_name
+    FROM sessions ss JOIN users u ON u.id = ss.user_id
+    LEFT JOIN stores s ON s.id = u.store_id
+    WHERE ss.token = ${token}
   `;
   if (!rows[0]) return null;
   const r = rows[0];
-  return { id: r.id, name: r.name, phone: r.phone, role: r.role, storeName: r.store_name };
+  return { id: r.id, name: r.name, phone: r.phone, role: r.role, storeId: r.store_id, storeName: r.store_name };
 }
 
 function setCors(res) {
@@ -96,4 +124,4 @@ function setCors(res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 }
 
-module.exports = { sql, ensureSchema, getUserFromRequest, setCors, bcrypt, buildDefaultCartons, seedDefaultCartons };
+module.exports = { sql, ensureSchema, getUserFromRequest, setCors, bcrypt, buildDefaultCartons, seedDefaultCartons, seedFactoryCartons, FACTORY_CATEGORIES };
