@@ -1,7 +1,42 @@
 const { neon } = require('@neondatabase/serverless');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 const sql = neon(process.env.DATABASE_URL);
+
+function buildDefaultCartons() {
+  const DEFAULT_PRODUCTS = ['Shampoo', 'Conditioner', 'Hair Mask', 'Hair Serum', 'Urea Cream', 'Cleanser Gel', 'Moisturizing Gel'];
+  const cartons = DEFAULT_PRODUCTS.map(name => ({
+    id: crypto.randomUUID(), name, unitsPerCarton: 0, cartonCount: 0, extraPieces: 0, clientName: '', threshold: null
+  }));
+  const VARIANT_GROUPS = [
+    { parentName: 'Roll On', variants: [
+      { label: 'Red', color: '#B23A2E' }, { label: 'Pink', color: '#D46A93' },
+      { label: 'Blue', color: '#2F6FB2' }, { label: 'Black', color: '#23211D' }
+    ]},
+    { parentName: 'Skin Serum', variants: [
+      { label: 'Niacinamide', color: '#B23A2E' }, { label: 'Vitamin C', color: '#C98A2B' }, { label: 'Hyaluronic', color: '#2F6FB2' }
+    ]}
+  ];
+  VARIANT_GROUPS.forEach(group => {
+    group.variants.forEach(v => {
+      cartons.push({
+        id: crypto.randomUUID(), name: group.parentName + ' - ' + v.label,
+        unitsPerCarton: 0, cartonCount: 0, extraPieces: 0, clientName: '', threshold: null,
+        parentName: group.parentName, variantLabel: v.label, variantColor: v.color
+      });
+    });
+  });
+  return cartons;
+}
+
+async function seedDefaultCartons(userId, keySuffix) {
+  const key = 'storage-cartons-' + userId + (keySuffix || '');
+  await sql`
+    INSERT INTO kv (key, value, updated_at) VALUES (${key}, ${JSON.stringify(buildDefaultCartons())}, now())
+    ON CONFLICT (key) DO NOTHING
+  `;
+}
 
 let schemaReady = null;
 async function ensureSchema() {
@@ -35,6 +70,8 @@ async function ensureSchema() {
                 VALUES ('admin', 'Admin', '01000000000', ${hash}, 'admin')
                 ON CONFLICT (phone) DO NOTHING`;
     }
+    await seedDefaultCartons('admin', '-office');
+    await seedDefaultCartons('admin', '-factory');
   })();
   return schemaReady;
 }
@@ -59,4 +96,4 @@ function setCors(res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 }
 
-module.exports = { sql, ensureSchema, getUserFromRequest, setCors, bcrypt };
+module.exports = { sql, ensureSchema, getUserFromRequest, setCors, bcrypt, buildDefaultCartons, seedDefaultCartons };

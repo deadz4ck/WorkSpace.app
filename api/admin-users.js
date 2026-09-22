@@ -9,7 +9,7 @@ module.exports = async (req, res) => {
     await ensureSchema();
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ error: 'Not logged in' });
-    if (user.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
+    if (user.role !== 'admin' && user.role !== 'manager') return res.status(403).json({ error: 'Forbidden' });
 
     const rows = await sql`SELECT id, name, phone, role, store_name FROM users ORDER BY created_at ASC`;
     return res.status(200).json({ users: rows.map(r => ({ id: r.id, name: r.name, phone: r.phone, role: r.role, storeName: r.store_name })) });

@@ -1,4 +1,4 @@
-const { sql, ensureSchema, setCors, bcrypt, seedDefaultCartons } = require('./_db');
+const { sql, ensureSchema, getUserFromRequest, setCors, bcrypt, seedDefaultCartons } = require('./_db');
 const crypto = require('crypto');
 
 module.exports = async (req, res) => {
@@ -8,8 +8,12 @@ module.exports = async (req, res) => {
 
   try {
     await ensureSchema();
-    const { name, phone, password, storeName } = req.body || {};
-    if (!name || !phone || !password || !storeName) {
+    const actor = await getUserFromRequest(req);
+    if (!actor) return res.status(401).json({ error: 'Not logged in' });
+    if (actor.role !== 'admin') return res.status(403).json({ error: 'Only the admin can create manager accounts' });
+
+    const { name, phone, password } = req.body || {};
+    if (!name || !phone || !password) {
       return res.status(400).json({ error: 'Missing fields' });
     }
     const egyptPhone = /^(01[0-2,5]\d{8})$/;
@@ -24,13 +28,10 @@ module.exports = async (req, res) => {
 
     const id = crypto.randomUUID();
     const hash = await bcrypt.hash(password, 10);
-    await sql`INSERT INTO users (id, name, phone, password_hash, role, store_name) VALUES (${id}, ${name}, ${phone}, ${hash}, 'promoter', ${storeName})`;
+    await sql`INSERT INTO users (id, name, phone, password_hash, role) VALUES (${id}, ${name}, ${phone}, ${hash}, 'manager')`;
     await seedDefaultCartons(id);
 
-    const token = crypto.randomUUID();
-    await sql`INSERT INTO sessions (token, user_id) VALUES (${token}, ${id})`;
-
-    return res.status(200).json({ token, user: { id, name, phone, role: 'promoter', storeName } });
+    return res.status(200).json({ user: { id, name, phone, role: 'manager' } });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Server error' });
