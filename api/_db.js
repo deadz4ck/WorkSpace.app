@@ -70,7 +70,7 @@ async function ensureSchema() {
                 VALUES ('admin', 'Admin', '01000000000', ${hash}, 'admin')
                 ON CONFLICT (phone) DO NOTHING`;
     }
-    await seedDefaultCartons('admin', '-office');
+    await seedDefaultCartons('office', '-shared');
     await seedDefaultCartons('admin', '-factory');
   })();
   return schemaReady;

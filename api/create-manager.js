@@ -1,4 +1,4 @@
-const { sql, ensureSchema, getUserFromRequest, setCors, bcrypt, seedDefaultCartons } = require('./_db');
+const { sql, ensureSchema, getUserFromRequest, setCors, bcrypt } = require('./_db');
 const crypto = require('crypto');
 
 module.exports = async (req, res) => {
@@ -29,7 +29,6 @@ module.exports = async (req, res) => {
     const id = crypto.randomUUID();
     const hash = await bcrypt.hash(password, 10);
     await sql`INSERT INTO users (id, name, phone, password_hash, role) VALUES (${id}, ${name}, ${phone}, ${hash}, 'manager')`;
-    await seedDefaultCartons(id);
 
     return res.status(200).json({ user: { id, name, phone, role: 'manager' } });
   } catch (err) {
