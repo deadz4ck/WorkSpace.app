@@ -1277,7 +1277,7 @@ body {
 
     <div id="storageCartonFields" class="hidden">
       <div id="promoterTotalFields" class="hidden">
-        <span class="field-label">Total pieces you have</span>
+        <span class="field-label">How many you currently have</span>
         <input type="number" id="promoterTotalPcsInput" placeholder="e.g. 45" min="0" step="1" />
       </div>
 
@@ -2117,12 +2117,15 @@ document.getElementById('resetBtn').addEventListener('click', async () => {
 /* ---------- Storage (Stickers & Cartons) ---------- */
 
 let adminContext = 'office';
-function contextSuffix() {
-  return (currentUser && currentUser.role === 'admin') ? ('-' + adminContext) : '';
+function storageOwnerKey() {
+  if (!currentUser) return 'guest';
+  if (currentUser.role === 'manager') return 'office-shared';
+  if (currentUser.role === 'admin') return adminContext === 'factory' ? 'admin-factory' : 'office-shared';
+  return currentUser.id; // promoter: personal storage
 }
-function STICKERS_KEY() { return 'storage-stickers-' + (currentUser ? currentUser.id : 'guest') + contextSuffix(); }
-function CARTONS_KEY() { return 'storage-cartons-' + (currentUser ? currentUser.id : 'guest') + contextSuffix(); }
-function HISTORY_KEY() { return 'storage-history-' + (currentUser ? currentUser.id : 'guest') + contextSuffix(); }
+function STICKERS_KEY() { return 'storage-stickers-' + storageOwnerKey(); }
+function CARTONS_KEY() { return 'storage-cartons-' + storageOwnerKey(); }
+function HISTORY_KEY() { return 'storage-history-' + storageOwnerKey(); }
 function SALES_KEY(userId) { return 'sales-' + (userId || (currentUser ? currentUser.id : 'guest')); }
 
 let activeSection = 'workspace';
@@ -2516,7 +2519,7 @@ document.getElementById('variantPickerOverlay').addEventListener('click', (e) =>
 function updateCartonTotalPreview() {
   if (!isPrivileged()) {
     const total = Number(document.getElementById('promoterTotalPcsInput').value) || 0;
-    document.getElementById('cartonTotalPreview').textContent = 'Total: ' + total + ' pieces';
+    document.getElementById('cartonTotalPreview').textContent = 'On hand: ' + total + ' pieces';
     return;
   }
   const units = Number(document.getElementById('unitsPerCartonInput').value) || 0;
@@ -2588,7 +2591,7 @@ function openStorageSheet(id, type) {
       updateCartonTotalPreview();
     } else {
       const stock = computeCartonStock(item, sales);
-      document.getElementById('promoterTotalPcsInput').value = stock.assigned;
+      document.getElementById('promoterTotalPcsInput').value = stock.remaining;
       updateCartonTotalPreview();
     }
   } else {
@@ -2713,19 +2716,22 @@ document.getElementById('storageSaveBtn').addEventListener('click', async () => 
     }
     await saveStickers();
   } else if (!isPrivileged()) {
-    // Promoter: simple running total only. Name is never taken from the input,
-    // so a promoter can't rename an existing product or create a new one.
-    const totalRaw = document.getElementById('promoterTotalPcsInput').value;
-    const total = totalRaw === '' ? 0 : Number(totalRaw);
+    // Promoter: the input is "how many they currently have" (i.e. remaining stock).
+    // We back-solve extraPieces so remaining = extraPieces - sold stays correct,
+    // instead of overwriting the running total and losing track of what's already sold.
+    // Name is never taken from the input, so a promoter can't rename or create a product.
+    const newRemainingRaw = document.getElementById('promoterTotalPcsInput').value;
+    const newRemaining = newRemainingRaw === '' ? 0 : Number(newRemainingRaw);
 
     if (editingStorageId) {
       const item = cartons.find(x => x.id === editingStorageId);
-      const oldTotal = computeCartonStock(item, sales).assigned;
+      const currentStock = computeCartonStock(item, sales);
+      const oldRemaining = currentStock.remaining;
       item.unitsPerCarton = 0;
       item.cartonCount = 0;
-      item.extraPieces = total;
-      if (oldTotal !== total) {
-        await logHistory('carton', editingStorageId, item.name, 'edited', `Total pieces: ${oldTotal} → ${total}`);
+      item.extraPieces = newRemaining + currentStock.sold;
+      if (oldRemaining !== newRemaining) {
+        await logHistory('carton', editingStorageId, item.name, 'edited', `On hand: ${oldRemaining} → ${newRemaining}`);
       }
       await saveCartons();
     }
