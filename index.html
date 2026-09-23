@@ -1490,7 +1490,11 @@ async function idbSet(key, value) {
     headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
     body: JSON.stringify({ key, value })
   });
-  if (!res.ok) throw new Error('Save failed');
+  if (!res.ok) {
+    let detail = '';
+    try { detail = (await res.json()).error || ''; } catch (e) {}
+    throw new Error(`Save failed (${res.status} for "${key}")` + (detail ? ': ' + detail : ''));
+  }
   return true;
 }
 
@@ -3828,7 +3832,8 @@ document.getElementById('receiptConfirmBtn').addEventListener('click', async () 
     alert('Transfer complete — stock updated in Office Storage and ' + storeName + '.');
     if (activeStoreContext === 'office-shared') renderOfficeStorageTab();
   } catch (e) {
-    alert('Something went wrong during the transfer. Please double check stock levels.');
+    console.error('Receipt transfer failed:', e);
+    alert('Transfer failed: ' + (e && e.message ? e.message : e));
   } finally {
     btn.disabled = false;
     btn.textContent = 'Confirm transfer';
@@ -3857,9 +3862,16 @@ async function performReceiptTransfer(transfers, targetStoreId, storeName) {
 
     const officeAssigned = (officeItem.unitsPerCarton || 0) * (officeItem.cartonCount || 0) + (officeItem.extraPieces || 0);
     const newOfficeRemaining = Math.max(0, officeAssigned - qty);
-    officeItem.unitsPerCarton = 0;
-    officeItem.cartonCount = 0;
-    officeItem.extraPieces = newOfficeRemaining;
+    // Keep the cartons/loose structure intact instead of collapsing everything into
+    // "loose pieces" - re-derive whole cartons + remainder from whatever units/carton
+    // this item already uses, so a small transfer doesn't turn 91 cartons into 0.
+    if (officeItem.unitsPerCarton > 0) {
+      officeItem.cartonCount = Math.floor(newOfficeRemaining / officeItem.unitsPerCarton);
+      officeItem.extraPieces = newOfficeRemaining % officeItem.unitsPerCarton;
+    } else {
+      officeItem.cartonCount = 0;
+      officeItem.extraPieces = newOfficeRemaining;
+    }
     officeHistory.push({
       id: uid(), itemType: 'carton', itemId: officeItem.id, itemName: officeItem.name, action: 'edited',
       details: `Sent ${qty} to ${storeName} (receipt scan by ${who}) — ${officeAssigned} → ${newOfficeRemaining}`,
