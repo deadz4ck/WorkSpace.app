@@ -420,6 +420,15 @@ body {
   margin-bottom: 0 !important;
   text-align: center;
 }
+.receipt-row-preview {
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-top: 6px;
+}
+.receipt-row-preview.ok {
+  color: var(--accent-1);
+  font-weight: 600;
+}
 
 .field-label {
   font-size: 12px;
@@ -3656,27 +3665,12 @@ async function submitReceiptScan(imageBase64, mediaType) {
       showReceiptState('error');
       return;
     }
-    renderReceiptReview(data.items);
+    await renderReceiptReview(data.items);
     showReceiptState('review');
   } catch (e) {
     document.getElementById('receiptErrorText').textContent = 'Could not reach the server.';
     showReceiptState('error');
   }
-}
-
-function bestOfficeMatch(rawName) {
-  const norm = s => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-  const target = norm(rawName);
-  if (!target) return null;
-  let best = null;
-  cartons.forEach(c => {
-    const cn = norm(c.name);
-    if (!cn) return;
-    if (cn === target || target.includes(cn) || cn.includes(target)) {
-      if (!best) best = c;
-    }
-  });
-  return best;
 }
 
 function populateReceiptStoreSelect() {
@@ -3690,9 +3684,33 @@ function populateReceiptStoreSelect() {
   });
 }
 
+let receiptOfficeCartons = [];
+
+async function fetchFreshOfficeCartons() {
+  try {
+    const raw = await idbGet('storage-cartons-office-shared');
+    receiptOfficeCartons = raw ? JSON.parse(raw) : [];
+  } catch (e) { receiptOfficeCartons = []; }
+}
+
+function bestOfficeMatchFresh(rawName) {
+  const norm = s => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const target = norm(rawName);
+  if (!target) return null;
+  let best = null;
+  receiptOfficeCartons.forEach(c => {
+    const cn = norm(c.name);
+    if (!cn) return;
+    if (cn === target || target.includes(cn) || cn.includes(target)) {
+      if (!best) best = c;
+    }
+  });
+  return best;
+}
+
 function addReceiptRow(rawName, qty, matchedId) {
   const list = document.getElementById('receiptItemsList');
-  const match = matchedId ? cartons.find(c => c.id === matchedId) : bestOfficeMatch(rawName);
+  const match = matchedId ? receiptOfficeCartons.find(c => c.id === matchedId) : bestOfficeMatchFresh(rawName);
   const row = document.createElement('div');
   row.className = 'receipt-item-row';
 
@@ -3712,10 +3730,11 @@ function addReceiptRow(rawName, qty, matchedId) {
   skipOpt.value = '';
   skipOpt.textContent = '— Choose a product —';
   matchSelect.appendChild(skipOpt);
-  cartons.forEach(c => {
+  receiptOfficeCartons.forEach(c => {
     const opt = document.createElement('option');
     opt.value = c.id;
-    opt.textContent = c.name;
+    const stockNow = computeCartonStock(c, []).remaining;
+    opt.textContent = c.name + ' (' + stockNow + ' in office now)';
     if (match && c.id === match.id) opt.selected = true;
     matchSelect.appendChild(opt);
   });
@@ -3738,6 +3757,28 @@ function addReceiptRow(rawName, qty, matchedId) {
   fields.appendChild(removeBtn);
 
   row.appendChild(fields);
+
+  const preview = document.createElement('div');
+  preview.className = 'receipt-row-preview';
+  row.appendChild(preview);
+
+  function updatePreview() {
+    const selectedId = matchSelect.value;
+    const q = Number(qtyInput.value) || 0;
+    if (!selectedId) {
+      preview.textContent = 'No product selected for this line — it will be skipped.';
+      preview.classList.remove('ok');
+      return;
+    }
+    const c = receiptOfficeCartons.find(x => x.id === selectedId);
+    const stockNow = c ? computeCartonStock(c, []).remaining : 0;
+    preview.textContent = `Selected: ${c ? c.name : '?'} — office has ${stockNow} now, will have ${Math.max(0, stockNow - q)} after sending ${q}.`;
+    preview.classList.add('ok');
+  }
+  matchSelect.addEventListener('change', updatePreview);
+  qtyInput.addEventListener('input', updatePreview);
+  updatePreview();
+
   list.appendChild(row);
 }
 
@@ -3745,16 +3786,17 @@ function openManualReceiptEntry() {
   populateReceiptStoreSelect();
   document.getElementById('receiptItemsLabel').textContent = 'Add each product and how many pieces';
   document.getElementById('receiptItemsList').innerHTML = '';
-  addReceiptRow('', '', null);
+  fetchFreshOfficeCartons().then(() => addReceiptRow('', '', null));
   showReceiptState('review');
 }
 document.getElementById('receiptManualBtn').addEventListener('click', openManualReceiptEntry);
 document.getElementById('receiptAddLineBtn').addEventListener('click', () => addReceiptRow('', '', null));
 
-function renderReceiptReview(items) {
+async function renderReceiptReview(items) {
   populateReceiptStoreSelect();
   document.getElementById('receiptItemsLabel').textContent = 'Detected items — check them before confirming';
   document.getElementById('receiptItemsList').innerHTML = '';
+  await fetchFreshOfficeCartons();
   items.forEach(it => addReceiptRow(it.name, it.quantity, null));
 }
 
