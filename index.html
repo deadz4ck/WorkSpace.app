@@ -415,6 +415,18 @@ body {
   flex: 1;
   margin-bottom: 0 !important;
 }
+.receipt-taken-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.receipt-taken-row > div {
+  flex: 1;
+}
+.receipt-item-row .receipt-taken-row input[type="number"] {
+  width: 100%;
+  margin-bottom: 0 !important;
+}
 .receipt-item-row input[type="number"] {
   width: 72px;
   margin-bottom: 0 !important;
@@ -3745,13 +3757,6 @@ function addReceiptRow(rawName, qty, matchedId) {
   if (!match) skipOpt.selected = true;
   fields.appendChild(matchSelect);
 
-  const qtyInput = document.createElement('input');
-  qtyInput.type = 'number';
-  qtyInput.min = '0';
-  qtyInput.step = '1';
-  qtyInput.value = qty || 0;
-  fields.appendChild(qtyInput);
-
   const removeBtn = document.createElement('button');
   removeBtn.type = 'button';
   removeBtn.className = 'icon-btn danger';
@@ -3762,25 +3767,71 @@ function addReceiptRow(rawName, qty, matchedId) {
 
   row.appendChild(fields);
 
+  const takenRow = document.createElement('div');
+  takenRow.className = 'receipt-taken-row';
+
+  const cartonsWrap = document.createElement('div');
+  cartonsWrap.innerHTML = '<span class="field-label" style="margin-bottom:2px;">Cartons taken</span>';
+  const cartonsInput = document.createElement('input');
+  cartonsInput.type = 'number';
+  cartonsInput.className = 'receipt-cartons-input';
+  cartonsInput.min = '0';
+  cartonsInput.step = '1';
+  cartonsInput.value = 0;
+  cartonsWrap.appendChild(cartonsInput);
+
+  const looseWrap = document.createElement('div');
+  looseWrap.innerHTML = '<span class="field-label" style="margin-bottom:2px;">Loose taken</span>';
+  const looseInput = document.createElement('input');
+  looseInput.type = 'number';
+  looseInput.className = 'receipt-loose-input';
+  looseInput.min = '0';
+  looseInput.step = '1';
+  looseInput.value = qty || 0;
+  looseWrap.appendChild(looseInput);
+
+  takenRow.appendChild(cartonsWrap);
+  takenRow.appendChild(looseWrap);
+  row.appendChild(takenRow);
+
   const preview = document.createElement('div');
   preview.className = 'receipt-row-preview';
   row.appendChild(preview);
 
+  function updateFieldVisibility() {
+    const c = receiptOfficeCartons.find(x => x.id === matchSelect.value);
+    const hasCartonUnit = c && (c.unitsPerCarton || 0) > 0;
+    cartonsWrap.classList.toggle('hidden', !hasCartonUnit);
+    if (!hasCartonUnit) cartonsInput.value = 0;
+  }
+
   function updatePreview() {
     const selectedId = matchSelect.value;
-    const q = Number(qtyInput.value) || 0;
+    const cartonsTaken = Number(cartonsInput.value) || 0;
+    const looseTaken = Number(looseInput.value) || 0;
     if (!selectedId) {
       preview.textContent = 'No product selected for this line — it will be skipped.';
       preview.classList.remove('ok');
       return;
     }
     const c = receiptOfficeCartons.find(x => x.id === selectedId);
-    const stockNow = c ? computeCartonStock(c, []).remaining : 0;
-    preview.textContent = `Selected: ${c ? c.name : '?'} — office has ${stockNow} now, will have ${Math.max(0, stockNow - q)} after sending ${q}.`;
-    preview.classList.add('ok');
+    if (!c) { preview.textContent = ''; return; }
+    const units = c.unitsPerCarton || 0;
+    const curCartons = c.cartonCount || 0;
+    const curLoose = c.extraPieces || 0;
+    const totalTaken = cartonsTaken * units + looseTaken;
+    const newCartons = Math.max(0, curCartons - cartonsTaken);
+    const newLoose = Math.max(0, curLoose - looseTaken);
+    let warning = '';
+    if (cartonsTaken > curCartons) warning = ` ⚠ only ${curCartons} cartons available.`;
+    if (looseTaken > curLoose) warning += ` ⚠ only ${curLoose} loose available.`;
+    preview.textContent = `Selected: ${c.name} — office has ${units ? curCartons + ' cartons + ' : ''}${curLoose} loose now, will have ${units ? newCartons + ' cartons + ' : ''}${newLoose} loose after taking ${totalTaken} pcs.${warning}`;
+    preview.classList.toggle('ok', !warning);
   }
-  matchSelect.addEventListener('change', updatePreview);
-  qtyInput.addEventListener('input', updatePreview);
+  matchSelect.addEventListener('change', () => { updateFieldVisibility(); updatePreview(); });
+  cartonsInput.addEventListener('input', updatePreview);
+  looseInput.addEventListener('input', updatePreview);
+  updateFieldVisibility();
   updatePreview();
 
   list.appendChild(row);
@@ -3811,8 +3862,9 @@ document.getElementById('receiptConfirmBtn').addEventListener('click', async () 
   const transfers = [];
   rows.forEach(row => {
     const cartonId = row.querySelector('.receipt-match-select').value;
-    const qty = Number(row.querySelector('input[type="number"]').value) || 0;
-    if (cartonId && qty > 0) transfers.push({ cartonId, qty });
+    const cartonsTaken = Number(row.querySelector('.receipt-cartons-input').value) || 0;
+    const looseTaken = Number(row.querySelector('.receipt-loose-input').value) || 0;
+    if (cartonId && (cartonsTaken > 0 || looseTaken > 0)) transfers.push({ cartonId, cartonsTaken, looseTaken });
   });
   if (!transfers.length) { alert('Nothing selected to transfer.'); return; }
 
@@ -3856,25 +3908,21 @@ async function performReceiptTransfer(transfers, targetStoreId, storeName) {
 
   const who = currentUser ? currentUser.name : 'Someone';
 
-  transfers.forEach(({ cartonId, qty }) => {
+  transfers.forEach(({ cartonId, cartonsTaken, looseTaken }) => {
     const officeItem = officeCartons.find(c => c.id === cartonId);
     if (!officeItem) return;
 
-    const officeAssigned = (officeItem.unitsPerCarton || 0) * (officeItem.cartonCount || 0) + (officeItem.extraPieces || 0);
-    const newOfficeRemaining = Math.max(0, officeAssigned - qty);
-    // Keep the cartons/loose structure intact instead of collapsing everything into
-    // "loose pieces" - re-derive whole cartons + remainder from whatever units/carton
-    // this item already uses, so a small transfer doesn't turn 91 cartons into 0.
-    if (officeItem.unitsPerCarton > 0) {
-      officeItem.cartonCount = Math.floor(newOfficeRemaining / officeItem.unitsPerCarton);
-      officeItem.extraPieces = newOfficeRemaining % officeItem.unitsPerCarton;
-    } else {
-      officeItem.cartonCount = 0;
-      officeItem.extraPieces = newOfficeRemaining;
-    }
+    const units = officeItem.unitsPerCarton || 0;
+    const oldCartons = officeItem.cartonCount || 0;
+    const oldLoose = officeItem.extraPieces || 0;
+    const totalTaken = cartonsTaken * units + looseTaken;
+    // Subtract exactly what was specified from where it was specified - cartons
+    // and loose are each reduced on their own, nothing else gets touched or rebalanced.
+    officeItem.cartonCount = Math.max(0, oldCartons - cartonsTaken);
+    officeItem.extraPieces = Math.max(0, oldLoose - looseTaken);
     officeHistory.push({
       id: uid(), itemType: 'carton', itemId: officeItem.id, itemName: officeItem.name, action: 'edited',
-      details: `Sent ${qty} to ${storeName} (receipt scan by ${who}) — ${officeAssigned} → ${newOfficeRemaining}`,
+      details: `Sent ${cartonsTaken} cartons + ${looseTaken} loose (${totalTaken} pcs) to ${storeName} (receipt scan by ${who}) — cartons ${oldCartons} → ${officeItem.cartonCount}, loose ${oldLoose} → ${officeItem.extraPieces}`,
       ts: Date.now()
     });
 
@@ -3886,13 +3934,13 @@ async function performReceiptTransfer(transfers, targetStoreId, storeName) {
     const storeAssigned = (storeItem.unitsPerCarton || 0) * (storeItem.cartonCount || 0) + (storeItem.extraPieces || 0);
     const storeSold = storeSales.filter(s => s.cartonId === storeItem.id).reduce((sum, s) => sum + (s.qty || 0), 0);
     const storeOldRemaining = storeAssigned - storeSold;
-    const newStoreRemaining = storeOldRemaining + qty;
+    const newStoreRemaining = storeOldRemaining + totalTaken;
     storeItem.unitsPerCarton = 0;
     storeItem.cartonCount = 0;
     storeItem.extraPieces = newStoreRemaining + storeSold;
     storeHistory.push({
       id: uid(), itemType: 'carton', itemId: storeItem.id, itemName: storeItem.name, action: 'edited',
-      details: `Received ${qty} from Office Storage (receipt scan by ${who}) — ${storeOldRemaining} → ${newStoreRemaining}`,
+      details: `Received ${totalTaken} pcs (${cartonsTaken} cartons + ${looseTaken} loose) from Office Storage (receipt scan by ${who}) — ${storeOldRemaining} → ${newStoreRemaining}`,
       ts: Date.now()
     });
   });
