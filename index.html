@@ -394,6 +394,33 @@ body {
   margin: 0 0 16px;
 }
 
+.receipt-item-row {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  background: var(--paper);
+}
+.receipt-item-row .receipt-raw-name {
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+}
+.receipt-item-row .receipt-row-fields {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.receipt-item-row select {
+  flex: 1;
+  margin-bottom: 0 !important;
+}
+.receipt-item-row input[type="number"] {
+  width: 72px;
+  margin-bottom: 0 !important;
+  text-align: center;
+}
+
 .field-label {
   font-size: 12px;
   color: var(--ink-soft);
@@ -1050,10 +1077,16 @@ body {
             stroke="#B23A2E" stroke-width="2.2" fill="none" stroke-linecap="round"/>
         </svg>
       </div>
+      <div style="display:flex;gap:8px;">
+      <button class="icon-btn" id="officeScanReceiptBtn">
+        <svg viewBox="0 0 24 24" width="14" height="14"><rect x="4" y="4" width="16" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        Scan receipt
+      </button>
       <button class="icon-btn" id="officeHistoryBtn">
         <svg viewBox="0 0 24 24" width="14" height="14"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 7.5V12l3 2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         History
       </button>
+      </div>
     </div>
     <p class="admin-note">Central office stock — synced live for admin and managers, and sent out to stores from here.</p>
     <div id="officeStorageContent"></div>
@@ -1164,6 +1197,46 @@ body {
     <div class="sheet-actions">
       <button class="btn btn-secondary" id="createStoreCancelBtn">Cancel</button>
       <button class="btn btn-primary" id="createStoreSaveBtn">Create</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="receiptOverlay">
+  <div class="sheet" id="receiptSheet">
+    <h2>Scan receipt</h2>
+
+    <div id="receiptPickState">
+      <p class="admin-note">Take a photo of the delivery receipt. Claude will read the products and quantities off it.</p>
+      <input type="file" id="receiptFileInput" accept="image/*" capture="environment" class="hidden" />
+      <button class="btn btn-primary" id="receiptTakePhotoBtn" style="width:100%;margin-top:8px;">Take / choose photo</button>
+      <button class="btn btn-secondary" id="receiptManualBtn" style="width:100%;margin-top:8px;">Enter it myself</button>
+    </div>
+
+    <div id="receiptLoadingState" class="hidden">
+      <div class="empty-note">Reading the receipt…</div>
+    </div>
+
+    <div id="receiptErrorState" class="hidden">
+      <p class="admin-note" id="receiptErrorText" style="color:var(--accent-2);"></p>
+      <button class="btn btn-secondary" id="receiptRetryBtn" style="width:100%;">Try another photo</button>
+    </div>
+
+    <div id="receiptReviewState" class="hidden">
+      <span class="field-label">Sending to store</span>
+      <select id="receiptStoreSelect"></select>
+
+      <span class="field-label" id="receiptItemsLabel">Detected items — check them before confirming</span>
+      <div id="receiptItemsList"></div>
+      <button class="btn btn-secondary" id="receiptAddLineBtn" style="width:100%;margin-bottom:16px;">+ Add a product</button>
+
+      <div class="sheet-actions">
+        <button class="btn btn-secondary" id="receiptCancelBtn">Cancel</button>
+        <button class="btn btn-primary" id="receiptConfirmBtn">Confirm transfer</button>
+      </div>
+    </div>
+
+    <div class="sheet-actions" id="receiptPickActions">
+      <button class="btn btn-secondary" id="receiptCloseBtn">Close</button>
     </div>
   </div>
 </div>
@@ -2535,7 +2608,7 @@ function renderFactoryCategoryItems(contentEl, category) {
     const extraText = item.extraPieces ? ` + ${item.extraPieces} loose` : '';
     const meta = document.createElement('div');
     meta.className = 'meta';
-    meta.textContent = `${item.unitsPerCarton || 0}/carton · ${item.cartonCount || 0} cartons${extraText} · ${total} total`;
+    meta.textContent = category === 'Stickers' ? `${total} in stock` : `${item.unitsPerCarton || 0}/carton · ${item.cartonCount || 0} cartons${extraText} · ${total} total`;
     card.appendChild(meta);
     card.addEventListener('click', () => openStorageSheet(item.id, 'carton'));
     const editBtn = document.createElement('div');
@@ -2750,12 +2823,15 @@ function openStorageSheet(id, type, presetCategory) {
 
   const lockedCarton = type === 'carton' && !isPrivileged();
   const inStoreContext = isPrivileged() && type === 'carton' && activeStoreContext && activeStoreContext !== 'office-shared';
+  const editCategory = id ? (cartons.find(x => x.id === id) || {}).category : presetCategory;
+  const isFactoryStickers = inFactory && editCategory === 'Stickers';
+  const simplePiecesMode = inStoreContext || isFactoryStickers;
   nameInput.disabled = lockedCarton || (inStoreContext && !!id);
   nameInput.classList.toggle('locked-field', lockedCarton || (inStoreContext && !!id));
-  document.getElementById('unitsPerCartonFieldWrap').classList.toggle('hidden', inStoreContext);
-  document.getElementById('extraPiecesFieldWrap').classList.toggle('hidden', inStoreContext);
-  document.getElementById('cartonCountLabel').textContent = inStoreContext ? 'Pieces in stock' : 'Number of cartons';
-  document.getElementById('cartonCountInput').placeholder = inStoreContext ? 'e.g. 45' : 'e.g. 30';
+  document.getElementById('unitsPerCartonFieldWrap').classList.toggle('hidden', simplePiecesMode);
+  document.getElementById('extraPiecesFieldWrap').classList.toggle('hidden', simplePiecesMode);
+  document.getElementById('cartonCountLabel').textContent = simplePiecesMode ? (isFactoryStickers ? 'Amount' : 'Pieces in stock') : 'Number of cartons';
+  document.getElementById('cartonCountInput').placeholder = simplePiecesMode ? 'e.g. 45' : 'e.g. 30';
 
   if (id) {
     const list = type === 'sticker' ? stickers : cartons;
@@ -2775,7 +2851,7 @@ function openStorageSheet(id, type, presetCategory) {
         });
       }
     } else if (isPrivileged()) {
-      if (inStoreContext) {
+      if (simplePiecesMode) {
         const stock = computeCartonStock(item, sales);
         unitsInput.value = 1;
         cartonCountInput.value = stock.remaining;
@@ -2921,6 +2997,36 @@ document.getElementById('storageSaveBtn').addEventListener('click', async () => 
       await logHistory('sticker', newItem.id, name, 'added', `Qty: ${amount ?? '—'}` + (newItem.hasImage ? ', with picture' : ''));
     }
     await saveStickers();
+  } else if (isPrivileged() && isAdmin() && adminContext === 'factory' && document.getElementById('cartonCategoryInput').value.trim() === 'Stickers') {
+    // Factory stickers: tracked as a plain amount, not cartons.
+    const newRemainingRaw = document.getElementById('cartonCountInput').value;
+    const newRemaining = newRemainingRaw === '' ? 0 : Number(newRemainingRaw);
+    const category = document.getElementById('cartonCategoryInput').value.trim();
+    const thresholdRaw = document.getElementById('cartonThresholdInput').value;
+    const threshold = thresholdRaw === '' ? null : Number(thresholdRaw);
+
+    if (editingStorageId) {
+      const item = cartons.find(x => x.id === editingStorageId);
+      const currentStock = computeCartonStock(item, sales);
+      const oldRemaining = currentStock.remaining;
+      const oldName = item.name, oldThreshold = item.threshold;
+      item.name = name;
+      item.unitsPerCarton = 0;
+      item.cartonCount = 0;
+      item.extraPieces = newRemaining + currentStock.sold;
+      item.category = category;
+      item.threshold = threshold;
+      const changeParts = [];
+      if (oldName !== name) changeParts.push(`Name: "${oldName}" → "${name}"`);
+      if (oldRemaining !== newRemaining) changeParts.push(`Amount: ${oldRemaining} → ${newRemaining}`);
+      if (oldThreshold !== threshold) changeParts.push(`Alert at: ${oldThreshold ?? '—'} → ${threshold ?? '—'}`);
+      await logHistory('carton', editingStorageId, name, 'edited', changeParts.length ? changeParts.join(', ') : 'No changes');
+    } else {
+      const newItem = { id: uid(), name, unitsPerCarton: 0, cartonCount: 0, extraPieces: newRemaining, category, threshold };
+      cartons.push(newItem);
+      await logHistory('carton', newItem.id, name, 'added', `${newRemaining} in stock`);
+    }
+    await saveCartons();
   } else if (!isPrivileged()) {
     // Promoter: the input is "how many they currently have" (i.e. remaining stock).
     // We back-solve extraPieces so remaining = extraPieces - sold stays correct,
@@ -2956,9 +3062,9 @@ document.getElementById('storageSaveBtn').addEventListener('click', async () => 
       const currentStock = computeCartonStock(item, sales);
       const oldRemaining = currentStock.remaining;
       const oldClient = item.clientName || '', oldThreshold = item.threshold;
-      item.unitsPerCarton = 1;
-      item.cartonCount = newRemaining;
-      item.extraPieces = 0;
+      item.unitsPerCarton = 0;
+      item.cartonCount = 0;
+      item.extraPieces = newRemaining + currentStock.sold;
       item.clientName = clientName;
       item.threshold = threshold;
       const changeParts = [];
@@ -2967,7 +3073,7 @@ document.getElementById('storageSaveBtn').addEventListener('click', async () => 
       if (oldThreshold !== threshold) changeParts.push(`Alert at: ${oldThreshold ?? '—'} → ${threshold ?? '—'}`);
       await logHistory('carton', editingStorageId, item.name, 'edited', changeParts.length ? changeParts.join(', ') : 'No changes');
     } else {
-      const newItem = { id: uid(), name, unitsPerCarton: 1, cartonCount: newRemaining, extraPieces: 0, clientName, threshold };
+      const newItem = { id: uid(), name, unitsPerCarton: 0, cartonCount: 0, extraPieces: newRemaining, clientName, threshold };
       cartons.push(newItem);
       await logHistory('carton', newItem.id, name, 'added', `${newRemaining} pcs in stock` + (clientName ? ` for ${clientName}` : ''));
     }
@@ -3483,6 +3589,267 @@ document.getElementById('storeRenameSaveBtn').addEventListener('click', async ()
     btn.disabled = false; btn.textContent = 'Save';
   }
 });
+
+/* ---------- Receipt scanning: Office Storage -> a store ---------- */
+
+function showReceiptState(state) {
+  document.getElementById('receiptPickState').classList.toggle('hidden', state !== 'pick');
+  document.getElementById('receiptLoadingState').classList.toggle('hidden', state !== 'loading');
+  document.getElementById('receiptErrorState').classList.toggle('hidden', state !== 'error');
+  document.getElementById('receiptReviewState').classList.toggle('hidden', state !== 'review');
+  document.getElementById('receiptPickActions').classList.toggle('hidden', state === 'review');
+}
+
+function openReceiptOverlay() {
+  document.getElementById('receiptFileInput').value = '';
+  showReceiptState('pick');
+  document.getElementById('receiptOverlay').classList.remove('hidden');
+}
+document.getElementById('officeScanReceiptBtn').addEventListener('click', openReceiptOverlay);
+document.getElementById('receiptCloseBtn').addEventListener('click', () => document.getElementById('receiptOverlay').classList.add('hidden'));
+document.getElementById('receiptCancelBtn').addEventListener('click', () => document.getElementById('receiptOverlay').classList.add('hidden'));
+document.getElementById('receiptRetryBtn').addEventListener('click', () => showReceiptState('pick'));
+document.getElementById('receiptTakePhotoBtn').addEventListener('click', () => document.getElementById('receiptFileInput').click());
+
+document.getElementById('receiptFileInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const maxDim = 1600;
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        const scale = maxDim / Math.max(width, height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      submitReceiptScan(dataUrl.split(',')[1], 'image/jpeg');
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+async function submitReceiptScan(imageBase64, mediaType) {
+  showReceiptState('loading');
+  try {
+    const res = await fetch('/api/scan-receipt', {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+      body: JSON.stringify({ imageBase64, mediaType })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      document.getElementById('receiptErrorText').textContent = data.error || 'Could not read the receipt.';
+      showReceiptState('error');
+      return;
+    }
+    if (!data.items || !data.items.length) {
+      document.getElementById('receiptErrorText').textContent = "Couldn't find any products on that photo. Try a clearer shot.";
+      showReceiptState('error');
+      return;
+    }
+    renderReceiptReview(data.items);
+    showReceiptState('review');
+  } catch (e) {
+    document.getElementById('receiptErrorText').textContent = 'Could not reach the server.';
+    showReceiptState('error');
+  }
+}
+
+function bestOfficeMatch(rawName) {
+  const norm = s => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const target = norm(rawName);
+  if (!target) return null;
+  let best = null;
+  cartons.forEach(c => {
+    const cn = norm(c.name);
+    if (!cn) return;
+    if (cn === target || target.includes(cn) || cn.includes(target)) {
+      if (!best) best = c;
+    }
+  });
+  return best;
+}
+
+function populateReceiptStoreSelect() {
+  const sel = document.getElementById('receiptStoreSelect');
+  sel.innerHTML = '';
+  stores.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = s.name;
+    sel.appendChild(opt);
+  });
+}
+
+function addReceiptRow(rawName, qty, matchedId) {
+  const list = document.getElementById('receiptItemsList');
+  const match = matchedId ? cartons.find(c => c.id === matchedId) : bestOfficeMatch(rawName);
+  const row = document.createElement('div');
+  row.className = 'receipt-item-row';
+
+  if (rawName) {
+    const raw = document.createElement('div');
+    raw.className = 'receipt-raw-name';
+    raw.textContent = 'On receipt: "' + rawName + '"';
+    row.appendChild(raw);
+  }
+
+  const fields = document.createElement('div');
+  fields.className = 'receipt-row-fields';
+
+  const matchSelect = document.createElement('select');
+  matchSelect.className = 'receipt-match-select';
+  const skipOpt = document.createElement('option');
+  skipOpt.value = '';
+  skipOpt.textContent = '— Choose a product —';
+  matchSelect.appendChild(skipOpt);
+  cartons.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.name;
+    if (match && c.id === match.id) opt.selected = true;
+    matchSelect.appendChild(opt);
+  });
+  if (!match) skipOpt.selected = true;
+  fields.appendChild(matchSelect);
+
+  const qtyInput = document.createElement('input');
+  qtyInput.type = 'number';
+  qtyInput.min = '0';
+  qtyInput.step = '1';
+  qtyInput.value = qty || 0;
+  fields.appendChild(qtyInput);
+
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'icon-btn danger';
+  removeBtn.textContent = '✕';
+  removeBtn.style.padding = '10px 12px';
+  removeBtn.addEventListener('click', () => row.remove());
+  fields.appendChild(removeBtn);
+
+  row.appendChild(fields);
+  list.appendChild(row);
+}
+
+function openManualReceiptEntry() {
+  populateReceiptStoreSelect();
+  document.getElementById('receiptItemsLabel').textContent = 'Add each product and how many pieces';
+  document.getElementById('receiptItemsList').innerHTML = '';
+  addReceiptRow('', '', null);
+  showReceiptState('review');
+}
+document.getElementById('receiptManualBtn').addEventListener('click', openManualReceiptEntry);
+document.getElementById('receiptAddLineBtn').addEventListener('click', () => addReceiptRow('', '', null));
+
+function renderReceiptReview(items) {
+  populateReceiptStoreSelect();
+  document.getElementById('receiptItemsLabel').textContent = 'Detected items — check them before confirming';
+  document.getElementById('receiptItemsList').innerHTML = '';
+  items.forEach(it => addReceiptRow(it.name, it.quantity, null));
+}
+
+document.getElementById('receiptConfirmBtn').addEventListener('click', async () => {
+  const storeId = document.getElementById('receiptStoreSelect').value;
+  if (!storeId) { alert('Pick a store first.'); return; }
+  const rows = [...document.getElementById('receiptItemsList').children];
+  const transfers = [];
+  rows.forEach(row => {
+    const cartonId = row.querySelector('.receipt-match-select').value;
+    const qty = Number(row.querySelector('input[type="number"]').value) || 0;
+    if (cartonId && qty > 0) transfers.push({ cartonId, qty });
+  });
+  if (!transfers.length) { alert('Nothing selected to transfer.'); return; }
+
+  const storeName = (stores.find(s => s.id === storeId) || {}).name || 'the store';
+  const confirmed = await customConfirm(
+    `Move ${transfers.length} product${transfers.length > 1 ? 's' : ''} from Office Storage to ${storeName}?`,
+    'Confirm transfer'
+  );
+  if (!confirmed) return;
+
+  const btn = document.getElementById('receiptConfirmBtn');
+  btn.disabled = true;
+  btn.textContent = 'Transferring…';
+  try {
+    await performReceiptTransfer(transfers, storeId, storeName);
+    document.getElementById('receiptOverlay').classList.add('hidden');
+    alert('Transfer complete — stock updated in Office Storage and ' + storeName + '.');
+    if (activeStoreContext === 'office-shared') renderOfficeStorageTab();
+  } catch (e) {
+    alert('Something went wrong during the transfer. Please double check stock levels.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Confirm transfer';
+  }
+});
+
+async function performReceiptTransfer(transfers, targetStoreId, storeName) {
+  const [officeCartonsRaw, officeHistoryRaw, storeCartonsRaw, storeSalesRaw, storeHistoryRaw] = await Promise.all([
+    idbGet('storage-cartons-office-shared'),
+    idbGet('storage-history-office-shared'),
+    idbGet('storage-cartons-store-' + targetStoreId),
+    idbGet('sales-store-' + targetStoreId),
+    idbGet('storage-history-store-' + targetStoreId)
+  ]);
+  const officeCartons = officeCartonsRaw ? JSON.parse(officeCartonsRaw) : [];
+  const officeHistory = officeHistoryRaw ? JSON.parse(officeHistoryRaw) : [];
+  const storeCartons = storeCartonsRaw ? JSON.parse(storeCartonsRaw) : [];
+  const storeSales = storeSalesRaw ? JSON.parse(storeSalesRaw) : [];
+  const storeHistory = storeHistoryRaw ? JSON.parse(storeHistoryRaw) : [];
+
+  const who = currentUser ? currentUser.name : 'Someone';
+
+  transfers.forEach(({ cartonId, qty }) => {
+    const officeItem = officeCartons.find(c => c.id === cartonId);
+    if (!officeItem) return;
+
+    const officeAssigned = (officeItem.unitsPerCarton || 0) * (officeItem.cartonCount || 0) + (officeItem.extraPieces || 0);
+    const newOfficeRemaining = Math.max(0, officeAssigned - qty);
+    officeItem.unitsPerCarton = 0;
+    officeItem.cartonCount = 0;
+    officeItem.extraPieces = newOfficeRemaining;
+    officeHistory.push({
+      id: uid(), itemType: 'carton', itemId: officeItem.id, itemName: officeItem.name, action: 'edited',
+      details: `Sent ${qty} to ${storeName} (receipt scan by ${who}) — ${officeAssigned} → ${newOfficeRemaining}`,
+      ts: Date.now()
+    });
+
+    let storeItem = storeCartons.find(c => c.name.toLowerCase() === officeItem.name.toLowerCase());
+    if (!storeItem) {
+      storeItem = { id: uid(), name: officeItem.name, unitsPerCarton: 0, cartonCount: 0, extraPieces: 0, clientName: '', threshold: null };
+      storeCartons.push(storeItem);
+    }
+    const storeAssigned = (storeItem.unitsPerCarton || 0) * (storeItem.cartonCount || 0) + (storeItem.extraPieces || 0);
+    const storeSold = storeSales.filter(s => s.cartonId === storeItem.id).reduce((sum, s) => sum + (s.qty || 0), 0);
+    const storeOldRemaining = storeAssigned - storeSold;
+    const newStoreRemaining = storeOldRemaining + qty;
+    storeItem.unitsPerCarton = 0;
+    storeItem.cartonCount = 0;
+    storeItem.extraPieces = newStoreRemaining + storeSold;
+    storeHistory.push({
+      id: uid(), itemType: 'carton', itemId: storeItem.id, itemName: storeItem.name, action: 'edited',
+      details: `Received ${qty} from Office Storage (receipt scan by ${who}) — ${storeOldRemaining} → ${newStoreRemaining}`,
+      ts: Date.now()
+    });
+  });
+
+  await Promise.all([
+    idbSet('storage-cartons-office-shared', JSON.stringify(officeCartons)),
+    idbSet('storage-history-office-shared', JSON.stringify(officeHistory)),
+    idbSet('storage-cartons-store-' + targetStoreId, JSON.stringify(storeCartons)),
+    idbSet('storage-history-store-' + targetStoreId, JSON.stringify(storeHistory))
+  ]);
+}
 
 function renderStorePromotersList() {
   const list = document.getElementById('storePromotersCurrentList');
