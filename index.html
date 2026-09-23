@@ -1282,18 +1282,23 @@ body {
           <datalist id="clientNameList"></datalist>
         </div>
 
+        <div id="unitsPerCartonFieldWrap">
         <span class="field-label">Units per carton</span>
         <input type="number" id="unitsPerCartonInput" placeholder="e.g. 12" min="0" step="1" />
+        </div>
 
-        <span class="field-label">Number of cartons</span>
+        <span class="field-label" id="cartonCountLabel">Number of cartons</span>
         <input type="number" id="cartonCountInput" placeholder="e.g. 30" min="0" step="1" />
 
+        <div id="extraPiecesFieldWrap">
         <span class="field-label">Extra loose pieces (not in a full carton)</span>
         <input type="number" id="extraPiecesInput" placeholder="e.g. 7" min="0" step="1" />
+        </div>
 
         <span class="field-label">Low-stock alert when remaining falls to (optional)</span>
         <input type="number" id="cartonThresholdInput" placeholder="e.g. 30" min="0" step="1" />
       </div>
+
 
       <div class="carton-total" id="cartonTotalPreview">Total: 0 units</div>
     </div>
@@ -2151,14 +2156,12 @@ function formatHistoryTime(ts) {
 }
 
 async function loadStorage() {
-  try {
-    const s = await idbGet(STICKERS_KEY());
-    stickers = s ? JSON.parse(s) : [];
-  } catch (e) { stickers = []; }
-  try {
-    const c = await idbGet(CARTONS_KEY());
-    cartons = c ? JSON.parse(c) : [];
-  } catch (e) { cartons = []; }
+  const [s, c] = await Promise.all([
+    idbGet(STICKERS_KEY()).catch(() => null),
+    idbGet(CARTONS_KEY()).catch(() => null)
+  ]);
+  try { stickers = s ? JSON.parse(s) : []; } catch (e) { stickers = []; }
+  try { cartons = c ? JSON.parse(c) : []; } catch (e) { cartons = []; }
 }
 
 async function saveStickers() {
@@ -2324,8 +2327,7 @@ async function renderOfficeStorageTab() {
   const contentEl = document.getElementById('officeStorageContent');
   contentEl.innerHTML = '<div class="empty-note">Loading…</div>';
   activeStoreContext = 'office-shared';
-  await loadStorage();
-  await loadHistory();
+  await Promise.all([loadStorage(), loadHistory()]);
   sales = [];
   renderCartonsGrid(contentEl, true);
 }
@@ -2352,9 +2354,14 @@ function renderStorageSection() {
 
 async function enterStoreDetail(storeId) {
   activeStoreContext = storeId;
-  await loadStorage();
-  await loadHistory();
-  sales = await loadStoreSalesRaw(storeId);
+  const contentEl = document.getElementById('storageContent');
+  if (contentEl) contentEl.innerHTML = '<div class="empty-note">Loading…</div>';
+  const [, , salesData] = await Promise.all([
+    loadStorage(),
+    loadHistory(),
+    loadStoreSalesRaw(storeId)
+  ]);
+  sales = salesData;
   renderStorageSection();
 }
 
@@ -2580,7 +2587,10 @@ function renderCartonsGrid(container, editable) {
     const stock = computeCartonStock(item, sales);
     const meta = document.createElement('div');
     meta.className = 'meta';
-    if (editable) {
+    const isStoreCtx = editable && activeStoreContext && activeStoreContext !== 'office-shared';
+    if (isStoreCtx) {
+      meta.textContent = `${stock.remaining} pcs in stock · ${stock.sold} sold`;
+    } else if (editable) {
       const extraText = item.extraPieces ? ` + ${item.extraPieces} loose` : '';
       meta.textContent = `${item.unitsPerCarton || 0}/carton · ${item.cartonCount || 0} cartons${extraText} · ${stock.assigned} assigned · ${stock.sold} sold · ${stock.remaining} left`;
     } else {
@@ -2693,7 +2703,12 @@ function updateCartonTotalPreview() {
   const units = Number(document.getElementById('unitsPerCartonInput').value) || 0;
   const cartonCount = Number(document.getElementById('cartonCountInput').value) || 0;
   const extra = Number(document.getElementById('extraPiecesInput').value) || 0;
-  document.getElementById('cartonTotalPreview').textContent = 'Total: ' + (units * cartonCount + extra) + ' units';
+  const inStore = document.getElementById('unitsPerCartonFieldWrap').classList.contains('hidden');
+  if (inStore) {
+    document.getElementById('cartonTotalPreview').textContent = 'On hand: ' + cartonCount + ' pieces';
+  } else {
+    document.getElementById('cartonTotalPreview').textContent = 'Total: ' + (units * cartonCount + extra) + ' units';
+  }
 }
 document.getElementById('unitsPerCartonInput').addEventListener('input', updateCartonTotalPreview);
 document.getElementById('cartonCountInput').addEventListener('input', updateCartonTotalPreview);
@@ -2734,8 +2749,13 @@ function openStorageSheet(id, type, presetCategory) {
   document.getElementById('storeClientFieldWrap').classList.toggle('hidden', inFactory);
 
   const lockedCarton = type === 'carton' && !isPrivileged();
-  nameInput.disabled = lockedCarton;
-  nameInput.classList.toggle('locked-field', lockedCarton);
+  const inStoreContext = isPrivileged() && type === 'carton' && activeStoreContext && activeStoreContext !== 'office-shared';
+  nameInput.disabled = lockedCarton || (inStoreContext && !!id);
+  nameInput.classList.toggle('locked-field', lockedCarton || (inStoreContext && !!id));
+  document.getElementById('unitsPerCartonFieldWrap').classList.toggle('hidden', inStoreContext);
+  document.getElementById('extraPiecesFieldWrap').classList.toggle('hidden', inStoreContext);
+  document.getElementById('cartonCountLabel').textContent = inStoreContext ? 'Pieces in stock' : 'Number of cartons';
+  document.getElementById('cartonCountInput').placeholder = inStoreContext ? 'e.g. 45' : 'e.g. 30';
 
   if (id) {
     const list = type === 'sticker' ? stickers : cartons;
@@ -2755,9 +2775,16 @@ function openStorageSheet(id, type, presetCategory) {
         });
       }
     } else if (isPrivileged()) {
-      unitsInput.value = item.unitsPerCarton !== undefined ? item.unitsPerCarton : '';
-      cartonCountInput.value = item.cartonCount !== undefined ? item.cartonCount : '';
-      extraPiecesInput.value = item.extraPieces !== undefined ? item.extraPieces : '';
+      if (inStoreContext) {
+        const stock = computeCartonStock(item, sales);
+        unitsInput.value = 1;
+        cartonCountInput.value = stock.remaining;
+        extraPiecesInput.value = 0;
+      } else {
+        unitsInput.value = item.unitsPerCarton !== undefined ? item.unitsPerCarton : '';
+        cartonCountInput.value = item.cartonCount !== undefined ? item.cartonCount : '';
+        extraPiecesInput.value = item.extraPieces !== undefined ? item.extraPieces : '';
+      }
       clientInput.value = item.clientName || '';
       categoryInput.value = item.category || '';
       thresholdInput.value = (item.threshold !== undefined && item.threshold !== null) ? item.threshold : '';
@@ -2916,6 +2943,35 @@ document.getElementById('storageSaveBtn').addEventListener('click', async () => 
     }
     // Promoters can't reach the "new item" path at all (Add New is hidden for them),
     // so there is nothing to create here.
+  } else if (isPrivileged() && activeStoreContext && activeStoreContext !== 'office-shared') {
+    // Admin/manager editing a store's shelf stock: tracked in pieces, not cartons.
+    const newRemainingRaw = document.getElementById('cartonCountInput').value;
+    const newRemaining = newRemainingRaw === '' ? 0 : Number(newRemainingRaw);
+    const clientName = document.getElementById('cartonClientInput').value.trim();
+    const thresholdRaw = document.getElementById('cartonThresholdInput').value;
+    const threshold = thresholdRaw === '' ? null : Number(thresholdRaw);
+
+    if (editingStorageId) {
+      const item = cartons.find(x => x.id === editingStorageId);
+      const currentStock = computeCartonStock(item, sales);
+      const oldRemaining = currentStock.remaining;
+      const oldClient = item.clientName || '', oldThreshold = item.threshold;
+      item.unitsPerCarton = 1;
+      item.cartonCount = newRemaining;
+      item.extraPieces = 0;
+      item.clientName = clientName;
+      item.threshold = threshold;
+      const changeParts = [];
+      if (oldRemaining !== newRemaining) changeParts.push(`Pieces: ${oldRemaining} → ${newRemaining}`);
+      if (oldClient !== clientName) changeParts.push(`Client: "${oldClient || '—'}" → "${clientName || '—'}"`);
+      if (oldThreshold !== threshold) changeParts.push(`Alert at: ${oldThreshold ?? '—'} → ${threshold ?? '—'}`);
+      await logHistory('carton', editingStorageId, item.name, 'edited', changeParts.length ? changeParts.join(', ') : 'No changes');
+    } else {
+      const newItem = { id: uid(), name, unitsPerCarton: 1, cartonCount: newRemaining, extraPieces: 0, clientName, threshold };
+      cartons.push(newItem);
+      await logHistory('carton', newItem.id, name, 'added', `${newRemaining} pcs in stock` + (clientName ? ` for ${clientName}` : ''));
+    }
+    await saveCartons();
   } else {
     const unitsRaw = document.getElementById('unitsPerCartonInput').value;
     const cartonRaw = document.getElementById('cartonCountInput').value;
