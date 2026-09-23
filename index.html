@@ -1073,7 +1073,7 @@ body {
   <nav class="bottom-nav" id="bottomNav">
     <button class="bottom-nav-item active" id="tabWorkspaceBtn">
       <svg viewBox="0 0 24 24"><path d="M4 21V10l8-6 8 6v11" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 21v-7h6v7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
-      <span>Office</span>
+      <span id="tabWorkspaceLabel">Office</span>
     </button>
     <button class="bottom-nav-item" id="tabStorageBtn">
       <svg viewBox="0 0 24 24"><path d="M3 8l9-4 9 4-9 4-9-4Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M3 8v8l9 4 9-4V8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 12v8" stroke="currentColor" stroke-width="1.7"/></svg>
@@ -1113,6 +1113,27 @@ body {
     <div id="officeStorageContent"></div>
 
     <div id="loadingState" class="loading hidden">Opening…</div>
+  </div>
+
+  <div id="factoryTreeSection" class="hidden">
+    <div class="header">
+      <div class="wordmark">
+        <span class="work">Work</span><span class="space">space</span>
+        <svg class="flourish" viewBox="0 0 190 34" xmlns="http://www.w3.org/2000/svg">
+          <path d="M 4 18 C 40 34, 90 34, 120 16 C 145 2, 168 8, 172 20 C 175 28, 165 30, 160 24 C 156 19, 162 15, 168 18 C 176 22, 174 30, 165 30"
+            stroke="#B23A2E" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <button class="icon-btn danger" id="factoryTreeResetBtn">
+        <svg viewBox="0 0 24 24" width="14" height="14"><path d="M4 7h16M9 7V4.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V7M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Reset all
+      </button>
+    </div>
+
+    <div class="crumbs" id="factoryTreeCrumbs"></div>
+    <div class="grid" id="factoryTreeGrid"></div>
+
+    <div id="factoryTreeLoadingState" class="loading hidden">Opening…</div>
   </div>
 
   <div id="storageSection" class="hidden">
@@ -1165,6 +1186,16 @@ body {
             stroke="#B23A2E" stroke-width="2.2" fill="none" stroke-linecap="round"/>
         </svg>
       </div>
+      <div style="display:flex;gap:8px;">
+      <button class="icon-btn" id="openReportsBtn">
+        <svg viewBox="0 0 24 24" width="14" height="14"><path d="M4 20V10M11 20V4M18 20v-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        Reports
+      </button>
+      <button class="icon-btn" id="openFullLogBtn">
+        <svg viewBox="0 0 24 24" width="14" height="14"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 7.5V12l3 2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        Full log
+      </button>
+      </div>
     </div>
     <p class="admin-note" id="adminSyncNote">Synced live across devices.</p>
 
@@ -1190,6 +1221,21 @@ body {
     <div id="adminSalesList"></div>
   </div>
 </div>
+</div>
+
+<div class="overlay hidden" id="reportsOverlay">
+  <div class="sheet" id="reportsSheet">
+    <div class="header" style="margin-bottom:10px;">
+      <h2 style="margin:0;">Sales report</h2>
+      <button class="range-picker-btn" id="reportsRangeBtn"></button>
+    </div>
+    <div class="carton-total" id="reportsTotalCard">Total sold: 0 units</div>
+    <div id="reportsProductList"></div>
+    <div class="sheet-actions">
+      <button class="btn btn-secondary" id="reportsCloseBtn">Close</button>
+      <button class="btn btn-primary" id="reportsExportBtn">Export CSV</button>
+    </div>
+  </div>
 </div>
 
 <div class="overlay hidden" id="createManagerOverlay">
@@ -1587,7 +1633,8 @@ async function enterAdminArea(context) {
   document.getElementById('switchAreaLabel').textContent = context === 'office' ? 'Office' : 'Factory';
 
   const isFactory = context === 'factory';
-  document.getElementById('tabWorkspaceBtn').classList.toggle('hidden', isFactory);
+  document.getElementById('tabWorkspaceBtn').classList.remove('hidden');
+  document.getElementById('tabWorkspaceLabel').textContent = isFactory ? 'Workspace' : 'Office';
   document.getElementById('tabSalesBtn').classList.toggle('hidden', isFactory);
   document.getElementById('tabAdminBtn').classList.toggle('hidden', isFactory);
 
@@ -1851,7 +1898,7 @@ function countDescendantImages(node, ids) {
 }
 
 function renderCrumbs() {
-  const el = document.getElementById('crumbs');
+  const el = document.getElementById('factoryTreeCrumbs');
   el.innerHTML = '';
   path.forEach((id, i) => {
     const node = findNode(tree, id);
@@ -1869,7 +1916,7 @@ function renderCrumbs() {
 }
 
 async function renderGrid() {
-  const grid = document.getElementById('grid');
+  const grid = document.getElementById('factoryTreeGrid');
   grid.innerHTML = '';
   const currentId = path[path.length - 1];
   const node = findNode(tree, currentId);
@@ -2195,6 +2242,17 @@ document.getElementById('deleteBtn').addEventListener('click', async () => {
   render();
 });
 
+document.getElementById('factoryTreeResetBtn').addEventListener('click', async () => {
+  const ok = await customConfirm('Erase everything in this workspace? This cannot be undone.', 'Erase all');
+  if (!ok) return;
+  const allImageIds = countDescendantImages(tree, []);
+  for (const id of allImageIds) await deleteImage(id);
+  tree = defaultTree();
+  await saveTree();
+  path = ['root'];
+  render();
+});
+
 /* ---------- Storage (Stickers & Cartons) ---------- */
 
 let adminContext = 'office';
@@ -2383,7 +2441,9 @@ document.getElementById('storageHistoryBtn').addEventListener('click', () => ope
 function switchSection(section) {
   if (!canAccessSection(section)) section = 'sales';
   activeSection = section;
-  document.getElementById('workspaceSection').classList.toggle('hidden', section !== 'workspace');
+  const inFactory = isAdmin() && adminContext === 'factory';
+  document.getElementById('workspaceSection').classList.toggle('hidden', section !== 'workspace' || inFactory);
+  document.getElementById('factoryTreeSection').classList.toggle('hidden', section !== 'workspace' || !inFactory);
   document.getElementById('storageSection').classList.toggle('hidden', section !== 'storage');
   document.getElementById('salesSection').classList.toggle('hidden', section !== 'sales');
   document.getElementById('adminSection').classList.toggle('hidden', section !== 'admin');
@@ -2391,7 +2451,10 @@ function switchSection(section) {
   document.getElementById('tabStorageBtn').classList.toggle('active', section === 'storage');
   document.getElementById('tabSalesBtn').classList.toggle('active', section === 'sales');
   document.getElementById('tabAdminBtn').classList.toggle('active', section === 'admin');
-  if (section === 'workspace') renderOfficeStorageTab();
+  if (section === 'workspace') {
+    if (inFactory) { path = ['root']; render(); }
+    else renderOfficeStorageTab();
+  }
   if (section === 'storage') renderStorageSection();
   if (section === 'sales') {
     document.getElementById('promoterSalesView').classList.toggle('hidden', isPrivileged());
@@ -3476,6 +3539,172 @@ async function renderAdminView() {
   document.getElementById('adminTotalPreviewCard').textContent = 'Total sold (all promoters): ' + grandTotal + ' units';
 }
 
+/* ---------- Full activity log (all stores + office + factory, no 15-item limit) ---------- */
+
+async function gatherAllActivity() {
+  const all = [];
+  try {
+    const raw = await idbGet('storage-history-office-shared');
+    const h = raw ? JSON.parse(raw) : [];
+    h.forEach(e => all.push({ ...e, sourceName: 'Office Storage' }));
+  } catch (e) {}
+  try {
+    const raw = await idbGet('storage-history-admin-factory');
+    const h = raw ? JSON.parse(raw) : [];
+    h.forEach(e => all.push({ ...e, sourceName: 'Factory' }));
+  } catch (e) {}
+  for (const store of stores) {
+    try {
+      const raw = await idbGet('storage-history-store-' + store.id);
+      const h = raw ? JSON.parse(raw) : [];
+      h.forEach(e => all.push({ ...e, sourceName: store.name }));
+    } catch (e) {}
+  }
+  return all.sort((a, b) => b.ts - a.ts);
+}
+
+async function openFullActivityLog() {
+  const container = document.getElementById('historyList');
+  const title = document.getElementById('historyTitle');
+  title.textContent = 'Full activity log';
+  container.innerHTML = '<div class="empty-note">Loading…</div>';
+  document.getElementById('historyOverlay').classList.remove('hidden');
+
+  const entries = await gatherAllActivity();
+  container.innerHTML = '';
+  if (!entries.length) {
+    container.innerHTML = '<div class="empty-note">No activity yet.</div>';
+    return;
+  }
+  entries.forEach(entry => {
+    const row = document.createElement('div');
+    row.className = 'history-entry';
+
+    const top = document.createElement('div');
+    top.className = 'history-top';
+    const badge = document.createElement('span');
+    badge.className = 'history-action ' + entry.action;
+    badge.textContent = entry.action.charAt(0).toUpperCase() + entry.action.slice(1);
+    const time = document.createElement('span');
+    time.className = 'history-time';
+    time.textContent = formatHistoryTime(entry.ts);
+    top.appendChild(badge);
+    top.appendChild(time);
+    row.appendChild(top);
+
+    const name = document.createElement('div');
+    name.className = 'history-name';
+    name.textContent = entry.sourceName + ' — ' + entry.itemName;
+    row.appendChild(name);
+
+    if (entry.details) {
+      const details = document.createElement('div');
+      details.className = 'history-details';
+      details.textContent = entry.details;
+      row.appendChild(details);
+    }
+    container.appendChild(row);
+  });
+}
+document.getElementById('openFullLogBtn').addEventListener('click', openFullActivityLog);
+
+/* ---------- Sales report: trends over a date range, with CSV export ---------- */
+
+let reportsRange = 'month';
+let reportsSalesCache = [];
+
+async function openReportsOverlay() {
+  document.getElementById('reportsOverlay').classList.remove('hidden');
+  await renderReportsView();
+}
+document.getElementById('openReportsBtn').addEventListener('click', openReportsOverlay);
+document.getElementById('reportsCloseBtn').addEventListener('click', () => {
+  document.getElementById('reportsOverlay').classList.add('hidden');
+});
+
+document.getElementById('reportsRangeBtn').addEventListener('click', () => {
+  openRangePicker(reportsRange, async (key) => {
+    reportsRange = key;
+    await renderReportsView();
+  });
+});
+
+async function renderReportsView() {
+  const rangeObj = RANGE_OPTIONS.find(r => r.key === reportsRange);
+  document.getElementById('reportsRangeBtn').innerHTML =
+    `<svg viewBox="0 0 24 24" width="15" height="15"><rect x="3.5" y="5" width="17" height="16" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 9.5h17M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    <span>${rangeObj.label}</span>
+    <svg viewBox="0 0 24 24" width="13" height="13" class="chev"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+  const productList = document.getElementById('reportsProductList');
+  productList.innerHTML = '<div class="empty-note">Loading…</div>';
+
+  const cutoff = rangeCutoff(reportsRange);
+  const rows = [];
+  for (const store of stores) {
+    let storeSales = [];
+    try {
+      const raw = await idbGet('sales-store-' + store.id);
+      storeSales = raw ? JSON.parse(raw) : [];
+    } catch (e) {}
+    storeSales.filter(s => s.ts >= cutoff).forEach(s => rows.push({ ...s, storeName: store.name }));
+  }
+  reportsSalesCache = rows;
+
+  const byProduct = {};
+  let grandTotal = 0;
+  rows.forEach(s => {
+    const key = s.product || 'Unknown';
+    byProduct[key] = (byProduct[key] || 0) + (s.qty || 0);
+    grandTotal += s.qty || 0;
+  });
+
+  document.getElementById('reportsTotalCard').textContent = `Total sold (${rangeObj.label.toLowerCase()}): ${grandTotal} units`;
+
+  productList.innerHTML = '';
+  const productNames = Object.keys(byProduct).sort((a, b) => byProduct[b] - byProduct[a]);
+  if (!productNames.length) {
+    productList.innerHTML = '<div class="empty-note">No sales in this range.</div>';
+    return;
+  }
+  productNames.forEach(name => {
+    const row = document.createElement('div');
+    row.className = 'sale-row';
+    row.innerHTML = `<span>${name}</span><span class="sale-meta">${byProduct[name]} sold</span>`;
+    productList.appendChild(row);
+  });
+}
+
+document.getElementById('reportsExportBtn').addEventListener('click', () => {
+  if (!reportsSalesCache.length) { alert('Nothing to export for this range.'); return; }
+  const header = ['Date', 'Store', 'Promoter', 'Product', 'Qty', 'Client', 'Note'];
+  const lines = [header.join(',')];
+  const csvEscape = v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+  reportsSalesCache
+    .slice()
+    .sort((a, b) => a.ts - b.ts)
+    .forEach(s => {
+      lines.push([
+        new Date(s.ts).toISOString(),
+        s.storeName || '',
+        s.promoterName || '',
+        s.product || '',
+        s.qty || 0,
+        s.clientName || '',
+        s.note || ''
+      ].map(csvEscape).join(','));
+    });
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'sales-report-' + reportsRange + '-' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+});
+
 document.getElementById('createManagerBtn').addEventListener('click', () => {
   document.getElementById('managerNameInput').value = '';
   document.getElementById('managerPhoneInput').value = '';
@@ -4087,21 +4316,23 @@ function renderRangeSwitcher(container) {
   btn.innerHTML = `<svg viewBox="0 0 24 24" width="15" height="15"><rect x="3.5" y="5" width="17" height="16" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 9.5h17M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
     <span>${rangeObj.label}</span>
     <svg viewBox="0 0 24 24" width="13" height="13" class="chev"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-  btn.addEventListener('click', () => openRangePicker());
+  btn.addEventListener('click', () => openRangePicker(adminSalesState.range, (key) => {
+    adminSalesState.range = key;
+    renderAdminSalesBrowser();
+  }));
   container.appendChild(btn);
 }
 
-function openRangePicker() {
+function openRangePicker(currentRangeKey, onSelect) {
   const list = document.getElementById('rangePickerList');
   list.innerHTML = '';
   RANGE_OPTIONS.forEach(r => {
     const item = document.createElement('div');
-    item.className = 'range-picker-item' + (adminSalesState.range === r.key ? ' current' : '');
+    item.className = 'range-picker-item' + (currentRangeKey === r.key ? ' current' : '');
     item.textContent = r.label;
     item.addEventListener('click', () => {
-      adminSalesState.range = r.key;
       document.getElementById('rangePickerOverlay').classList.add('hidden');
-      renderAdminSalesBrowser();
+      onSelect(r.key);
     });
     list.appendChild(item);
   });
