@@ -928,6 +928,34 @@ body {
   margin-bottom: 14px;
 }
 
+.balance-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent-1);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+}
+.balance-banner.owing {
+  border-left-color: var(--accent-2);
+}
+.balance-banner .balance-label {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.balance-banner .balance-amount {
+  font-family: 'Roboto Slab', serif;
+  font-size: 18px;
+  font-weight: 700;
+}
+.balance-banner.owing .balance-amount {
+  color: var(--accent-2);
+}
+
 .admin-block-title {
   font-family: 'Roboto Slab', serif;
   font-size: 14px;
@@ -1145,13 +1173,20 @@ body {
             stroke="#B23A2E" stroke-width="2.2" fill="none" stroke-linecap="round"/>
         </svg>
       </div>
+      <div style="display:flex;gap:8px;">
+      <button class="icon-btn hidden" id="storagePaymentsBtn">
+        <svg viewBox="0 0 24 24" width="14" height="14"><rect x="2.5" y="6" width="19" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M2.5 10.5h19" stroke="currentColor" stroke-width="1.6"/></svg>
+        Payments
+      </button>
       <button class="icon-btn hidden" id="storageHistoryBtn">
         <svg viewBox="0 0 24 24" width="14" height="14"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 7.5V12l3 2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         History
       </button>
+      </div>
     </div>
 
     <div class="admin-crumbs" id="storageCrumbs"></div>
+    <div id="storeBalanceBanner" class="hidden"></div>
     <div id="storageContent"></div>
   </div>
 
@@ -1296,6 +1331,9 @@ body {
       <div id="receiptItemsList"></div>
       <button class="btn btn-secondary" id="receiptAddLineBtn" style="width:100%;margin-bottom:16px;">+ Add a product</button>
 
+      <span class="field-label">Amount owed for this receipt (EGP) — optional</span>
+      <input type="number" id="receiptAmountInput" placeholder="e.g. 1500" min="0" step="0.01" />
+
       <div class="sheet-actions">
         <button class="btn btn-secondary" id="receiptCancelBtn">Cancel</button>
         <button class="btn btn-primary" id="receiptConfirmBtn">Confirm transfer</button>
@@ -1304,6 +1342,27 @@ body {
 
     <div class="sheet-actions" id="receiptPickActions">
       <button class="btn btn-secondary" id="receiptCloseBtn">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="storePaymentsOverlay">
+  <div class="sheet" id="storePaymentsSheet">
+    <h2 id="storePaymentsTitle">Payments</h2>
+    <div class="carton-total" id="storePaymentsBalanceCard">Owes: 0 EGP</div>
+
+    <span class="field-label">Record a payment received</span>
+    <div class="image-row">
+      <input type="number" id="storePaymentAmountInput" placeholder="e.g. 500" min="0" step="0.01" style="flex:1;" />
+      <button class="icon-btn" id="storePaymentSaveBtn">Add</button>
+    </div>
+    <input type="text" id="storePaymentNoteInput" placeholder="Optional note (e.g. cash, Vodafone Cash)" style="margin-bottom:16px;" />
+
+    <span class="field-label">Receipts &amp; payments log</span>
+    <div id="storePaymentsLogList"></div>
+
+    <div class="sheet-actions">
+      <button class="btn btn-secondary" id="storePaymentsCloseBtn">Close</button>
     </div>
   </div>
 </div>
@@ -2526,7 +2585,111 @@ async function enterStoreDetail(storeId) {
   renderStorageSection();
 }
 
+/* ---------- Store balance: receipts owed minus payments received ---------- */
+
+async function loadStorePayments(storeId) {
+  try {
+    const raw = await idbGet('payments-store-' + storeId);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) { return []; }
+}
+
+async function saveStorePayments(storeId, entries) {
+  await idbSet('payments-store-' + storeId, JSON.stringify(entries));
+}
+
+function computeStoreBalance(entries) {
+  return entries.reduce((sum, e) => sum + (e.type === 'payment' ? -e.amount : e.amount), 0);
+}
+
+async function renderStoreBalanceBanner(storeId) {
+  const banner = document.getElementById('storeBalanceBanner');
+  const entries = await loadStorePayments(storeId);
+  const balance = computeStoreBalance(entries);
+  banner.classList.remove('hidden');
+  banner.className = 'balance-banner' + (balance > 0 ? ' owing' : '');
+  banner.innerHTML = `<span class="balance-label">Store balance</span><span class="balance-amount">${balance > 0 ? 'Owes ' + balance.toFixed(2) + ' EGP' : (balance < 0 ? 'Overpaid ' + Math.abs(balance).toFixed(2) + ' EGP' : 'Settled — 0 EGP')}</span>`;
+}
+
+async function openStorePaymentsOverlay(storeId, storeName) {
+  document.getElementById('storePaymentsTitle').textContent = storeName + ' — Payments';
+  document.getElementById('storePaymentAmountInput').value = '';
+  document.getElementById('storePaymentNoteInput').value = '';
+  document.getElementById('storePaymentsOverlay').dataset.storeId = storeId;
+  await renderStorePaymentsLog(storeId);
+  document.getElementById('storePaymentsOverlay').classList.remove('hidden');
+}
+
+async function renderStorePaymentsLog(storeId) {
+  const entries = await loadStorePayments(storeId);
+  const balance = computeStoreBalance(entries);
+  document.getElementById('storePaymentsBalanceCard').textContent =
+    balance > 0 ? `Owes: ${balance.toFixed(2)} EGP` : (balance < 0 ? `Overpaid: ${Math.abs(balance).toFixed(2)} EGP` : 'Settled: 0 EGP');
+
+  const list = document.getElementById('storePaymentsLogList');
+  list.innerHTML = '';
+  if (!entries.length) {
+    list.innerHTML = '<div class="empty-note">No receipts or payments logged yet.</div>';
+    return;
+  }
+  entries.slice().sort((a, b) => b.ts - a.ts).forEach(e => {
+    const row = document.createElement('div');
+    row.className = 'history-entry';
+    const top = document.createElement('div');
+    top.className = 'history-top';
+    const badge = document.createElement('span');
+    badge.className = 'history-action ' + (e.type === 'payment' ? 'edited' : 'added');
+    badge.textContent = e.type === 'payment' ? 'Payment' : 'Receipt';
+    const time = document.createElement('span');
+    time.className = 'history-time';
+    time.textContent = formatHistoryTime(e.ts);
+    top.appendChild(badge);
+    top.appendChild(time);
+    row.appendChild(top);
+    const name = document.createElement('div');
+    name.className = 'history-name';
+    name.textContent = (e.type === 'payment' ? '− ' : '+ ') + e.amount.toFixed(2) + ' EGP';
+    row.appendChild(name);
+    if (e.note) {
+      const details = document.createElement('div');
+      details.className = 'history-details';
+      details.textContent = e.note;
+      row.appendChild(details);
+    }
+    list.appendChild(row);
+  });
+}
+
+document.getElementById('storePaymentsCloseBtn').addEventListener('click', () => {
+  document.getElementById('storePaymentsOverlay').classList.add('hidden');
+});
+
+document.getElementById('storePaymentSaveBtn').addEventListener('click', async () => {
+  const storeId = document.getElementById('storePaymentsOverlay').dataset.storeId;
+  const amountRaw = document.getElementById('storePaymentAmountInput').value;
+  const amount = Number(amountRaw);
+  if (!amountRaw || !(amount > 0)) { alert('Enter a payment amount greater than 0.'); return; }
+  const note = document.getElementById('storePaymentNoteInput').value.trim();
+  const btn = document.getElementById('storePaymentSaveBtn');
+  btn.disabled = true;
+  try {
+    const entries = await loadStorePayments(storeId);
+    entries.push({ id: uid(), type: 'payment', amount, note, ts: Date.now(), who: currentUser ? currentUser.name : '' });
+    await saveStorePayments(storeId, entries);
+    document.getElementById('storePaymentAmountInput').value = '';
+    document.getElementById('storePaymentNoteInput').value = '';
+    await renderStorePaymentsLog(storeId);
+    if (activeStoreContext === storeId) await renderStoreBalanceBanner(storeId);
+  } catch (e) {
+    alert('Could not save that payment. Please try again.');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 function renderOfficeStorageSection(crumbsEl, contentEl, historyBtn) {
+  document.getElementById('storagePaymentsBtn').classList.add('hidden');
+  document.getElementById('storeBalanceBanner').classList.add('hidden');
   crumbsEl.appendChild(makeAdminCrumb('Stores', () => {
     storageNav = { level: 'stores', storeId: null };
     renderStorageSection();
@@ -2543,6 +2706,9 @@ function renderOfficeStorageSection(crumbsEl, contentEl, historyBtn) {
     crumbsEl.appendChild(makeAdminCrumb(store ? store.name : '…', () => {}, true));
     historyBtn.classList.remove('hidden');
     historyBtn.onclick = () => openHistoryOverlay(null, null);
+    document.getElementById('storagePaymentsBtn').classList.remove('hidden');
+    document.getElementById('storagePaymentsBtn').onclick = () => openStorePaymentsOverlay(storageNav.storeId, store ? store.name : '');
+    renderStoreBalanceBanner(storageNav.storeId);
     renderCartonsGrid(contentEl, true);
     return;
   }
@@ -3856,6 +4022,7 @@ function showReceiptState(state) {
 
 function openReceiptOverlay() {
   document.getElementById('receiptFileInput').value = '';
+  document.getElementById('receiptAmountInput').value = '';
   showReceiptState('pick');
   document.getElementById('receiptOverlay').classList.remove('hidden');
 }
@@ -4096,10 +4263,12 @@ document.getElementById('receiptConfirmBtn').addEventListener('click', async () 
     if (cartonId && (cartonsTaken > 0 || looseTaken > 0)) transfers.push({ cartonId, cartonsTaken, looseTaken });
   });
   if (!transfers.length) { alert('Nothing selected to transfer.'); return; }
+  const egpAmount = Number(document.getElementById('receiptAmountInput').value) || 0;
 
   const storeName = (stores.find(s => s.id === storeId) || {}).name || 'the store';
   const confirmed = await customConfirm(
-    `Move ${transfers.length} product${transfers.length > 1 ? 's' : ''} from Office Storage to ${storeName}?`,
+    `Move ${transfers.length} product${transfers.length > 1 ? 's' : ''} from Office Storage to ${storeName}?` +
+    (egpAmount > 0 ? ` This will add ${egpAmount.toFixed(2)} EGP to what ${storeName} owes.` : ''),
     'Confirm transfer'
   );
   if (!confirmed) return;
@@ -4109,9 +4278,15 @@ document.getElementById('receiptConfirmBtn').addEventListener('click', async () 
   btn.textContent = 'Transferring…';
   try {
     await performReceiptTransfer(transfers, storeId, storeName);
+    if (egpAmount > 0) {
+      const entries = await loadStorePayments(storeId);
+      entries.push({ id: uid(), type: 'receipt', amount: egpAmount, note: 'Stock receipt', ts: Date.now(), who: currentUser ? currentUser.name : '' });
+      await saveStorePayments(storeId, entries);
+    }
     document.getElementById('receiptOverlay').classList.add('hidden');
-    alert('Transfer complete — stock updated in Office Storage and ' + storeName + '.');
+    alert('Transfer complete — stock updated in Office Storage and ' + storeName + '.' + (egpAmount > 0 ? ' Added ' + egpAmount.toFixed(2) + ' EGP to their balance.' : ''));
     if (activeStoreContext === 'office-shared') renderOfficeStorageTab();
+    if (activeStoreContext === storeId) renderStoreBalanceBanner(storeId);
   } catch (e) {
     console.error('Receipt transfer failed:', e);
     alert('Transfer failed: ' + (e && e.message ? e.message : e));
