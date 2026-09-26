@@ -5,9 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Workspace</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#23211D">
+<meta name="theme-color" content="#23211D" id="themeColorMeta">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
+<script>
+(function() {
+  try {
+    var t = localStorage.getItem('theme');
+    if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+  } catch (e) {}
+})();
+</script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@500;700&family=Inter:wght@400;500;600&family=Playfair+Display:wght@700&family=Dancing+Script:wght@600;700&display=swap');
 
@@ -21,6 +29,14 @@
   --accent-2: #B23A2E;
   --accent-3: #C98A2B;
   --accent-4: #6B4C6B;
+}
+
+:root[data-theme="dark"] {
+  --paper: #17181A;
+  --card: #212326;
+  --ink: #EDEAE2;
+  --ink-soft: #9B978A;
+  --line: #383A3E;
 }
 
 * { box-sizing: border-box; }
@@ -1087,6 +1103,10 @@ body {
   <div class="user-bar">
     <span id="userGreeting"></span>
     <div style="display:flex; gap:8px;">
+      <button class="icon-btn" id="themeToggleBtn" title="Toggle dark mode">
+        <svg viewBox="0 0 24 24" width="14" height="14" id="themeToggleIconSun"><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 2.5v3M12 18.5v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2.5 12h3M18.5 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <svg viewBox="0 0 24 24" width="14" height="14" id="themeToggleIconMoon" class="hidden"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+      </button>
       <button class="icon-btn hidden" id="switchAreaBtn">
         <svg viewBox="0 0 24 24" width="14" height="14"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M18 3v4h-4M6 21v-4h4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <span id="switchAreaLabel">Office</span>
@@ -1721,6 +1741,30 @@ document.getElementById('chooseFactoryBtn').addEventListener('click', () => ente
 document.getElementById('switchAreaBtn').addEventListener('click', () => {
   document.getElementById('mainApp').classList.add('hidden');
   document.getElementById('areaChooserView').classList.remove('hidden');
+});
+
+function applyTheme(theme) {
+  const sun = document.getElementById('themeToggleIconSun');
+  const moon = document.getElementById('themeToggleIconMoon');
+  const meta = document.getElementById('themeColorMeta');
+  if (theme === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    if (sun) sun.classList.add('hidden');
+    if (moon) moon.classList.remove('hidden');
+    if (meta) meta.setAttribute('content', '#17181A');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+    if (sun) sun.classList.remove('hidden');
+    if (moon) moon.classList.add('hidden');
+    if (meta) meta.setAttribute('content', '#23211D');
+  }
+}
+applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
+document.getElementById('themeToggleBtn').addEventListener('click', () => {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const next = isDark ? 'light' : 'dark';
+  try { localStorage.setItem('theme', next); } catch (e) {}
+  applyTheme(next);
 });
 
 document.getElementById('goLoginBtn').addEventListener('click', () => showAuthScreen('login'));
