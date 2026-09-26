@@ -845,13 +845,29 @@ body {
   align-items: center;
   justify-content: center;
 }
-.app-loading-logo {
-  width: 130px;
-  animation: loadingPulse 1.4s ease-in-out infinite;
+.app-loading-infinity {
+  width: 200px;
+  max-width: 60vw;
+  overflow: visible;
 }
-@keyframes loadingPulse {
-  0%, 100% { opacity: 0.55; transform: scale(0.97); }
-  50% { opacity: 1; transform: scale(1); }
+.app-loading-infinity-track {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+.app-loading-infinity-string {
+  fill: none;
+  stroke: #B23A2E;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-dasharray: 70 230;
+  stroke-dashoffset: 0;
+  animation: loadingStringDraw 1.8s linear infinite;
+}
+@keyframes loadingStringDraw {
+  0% { stroke-dashoffset: 300; }
+  100% { stroke-dashoffset: 0; }
 }
 
 .auth-card {
@@ -1027,7 +1043,10 @@ body {
 <body>
 
 <div id="appLoadingScreen" class="app-loading-screen">
-  <img src="logo.webp" alt="" class="app-loading-logo" />
+  <svg class="app-loading-infinity" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+    <path class="app-loading-infinity-track" pathLength="300" d="M50,50 C50,27 65,15 82,15 C104,15 116,50 116,50 C116,50 128,85 150,85 C167,85 182,73 182,50 C182,27 167,15 150,15 C128,15 116,50 116,50 C116,50 104,85 82,85 C65,85 50,73 50,50 Z" />
+    <path class="app-loading-infinity-string" pathLength="300" d="M50,50 C50,27 65,15 82,15 C104,15 116,50 116,50 C116,50 128,85 150,85 C167,85 182,73 182,50 C182,27 167,15 150,15 C128,15 116,50 116,50 C116,50 104,85 82,85 C65,85 50,73 50,50 Z" />
+  </svg>
 </div>
 
 <svg class="bg-strings" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
